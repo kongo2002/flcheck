@@ -1,4 +1,7 @@
+use crate::cli::Opts;
 use crate::config::Config;
+use crate::error::FlError;
+use crate::pubspec::Pubspec;
 
 extern crate yaml_rust;
 
@@ -8,24 +11,27 @@ mod error;
 mod pubspec;
 mod util;
 
+fn run(opts: Opts) -> Result<(), FlError> {
+    let config = Config::load(&opts.config_file)?;
+
+    let pubspecs: Result<Vec<Pubspec>, _> = pubspec::find_pubspecs(&opts.root_dir)
+        .iter()
+        .filter(|path| !config.is_blacklisted(path))
+        .map(|pubspec| Pubspec::load(pubspec))
+        .collect();
+
+    for pubspec in pubspecs?.iter() {
+        println!("{:?}", pubspec);
+    }
+
+    Ok(())
+}
+
 fn main() {
     let opts = cli::get_opts();
-    match Config::load(&opts.config_file) {
-        Ok(config) => {
-            if !config.is_valid() {
-                eprintln!("no package types configured");
-                std::process::exit(1);
-            }
 
-            for yaml in pubspec::find_pubspecs(&opts.root_dir) {
-                if !config.is_blacklisted(&yaml) {
-                    println!("{}", yaml);
-                }
-            }
-        }
-        Err(err) => {
-            eprintln!("failed to load configuration: {}", err);
-            std::process::exit(1);
-        }
+    if let Err(err) = run(opts) {
+        eprintln!("{}", err);
+        std::process::exit(1);
     }
 }

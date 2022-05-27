@@ -73,6 +73,10 @@ impl Config {
     }
 
     fn validate(self) -> Result<Config, FlError> {
+        if !self.is_valid() {
+            return Err(ConfigValidation("no package types configured".to_owned()))
+        }
+
         self.package_types
             .iter()
             .flat_map(|package| {
