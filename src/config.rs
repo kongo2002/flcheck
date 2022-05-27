@@ -23,9 +23,7 @@ impl Config {
     }
 
     pub fn is_blacklisted(&self, full_path: &str) -> bool {
-        self.blacklist.iter().any(|entry| {
-            entry.is_match(full_path)
-        })
+        self.blacklist.iter().any(|entry| entry.is_match(full_path))
     }
 
     pub fn load(file: &str) -> Result<Config, FlError> {
@@ -60,14 +58,12 @@ impl Config {
             })
             .collect();
 
-        blacklist.and_then(|bl| {
-            let config = Config {
+        blacklist
+            .map(|bl| Config {
                 package_types: package_types.collect(),
                 blacklist: bl,
-            };
-
-            config.validate().map(Err).unwrap_or(Ok(config))
-        })
+            })
+            .and_then(|c| c.validate())
     }
 
     fn package_exists(&self, package_name: &str) -> bool {
@@ -76,34 +72,32 @@ impl Config {
             .any(|package| package.name == package_name)
     }
 
-    fn validate(&self) -> Option<FlError> {
+    fn validate(self) -> Result<Config, FlError> {
         self.package_types
             .iter()
-            .fold(None, |acc, package| match acc {
-                Some(_) => acc,
-                None => {
-                    let unknown_include = package
-                        .includes
-                        .iter()
-                        .find(|include| !self.package_exists(include));
+            .flat_map(|package| {
+                let unknown_include = package
+                    .includes
+                    .iter()
+                    .find(|include| !self.package_exists(include));
 
-                    unknown_include
-                        .map(|include| {
-                            let err = format!(
-                                "package '{}': unknown include '{}'",
-                                package.name, include
-                            );
-                            ConfigValidation(err.to_owned())
-                        })
-                        .or_else(|| {
-                            if package.prefix.is_empty() {
-                                let err = format!("package '{}': empty prefix", package.name);
-                                Some(ConfigValidation(err.to_owned()))
-                            } else {
-                                None
-                            }
-                        })
-                }
+                unknown_include
+                    .map(|include| {
+                        let err =
+                            format!("package '{}': unknown include '{}'", package.name, include);
+                        ConfigValidation(err.to_owned())
+                    })
+                    .or_else(|| {
+                        if package.prefix.is_empty() {
+                            let err = format!("package '{}': empty prefix", package.name);
+                            Some(ConfigValidation(err.to_owned()))
+                        } else {
+                            None
+                        }
+                    })
             })
+            .next()
+            .map(Err)
+            .unwrap_or(Ok(self))
     }
 }
