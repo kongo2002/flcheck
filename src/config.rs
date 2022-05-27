@@ -1,10 +1,13 @@
 use crate::error::FlError;
 use crate::error::FlError::ConfigValidation;
 use crate::util::load_yaml;
+use crate::util::yaml_str_list;
+use regex::Regex;
 
 #[derive(Debug)]
 pub struct Config {
     pub package_types: Vec<PackageType>,
+    blacklist: Vec<Regex>,
 }
 
 #[derive(Debug)]
@@ -19,6 +22,12 @@ impl Config {
         !self.package_types.is_empty()
     }
 
+    pub fn is_blacklisted(&self, full_path: &str) -> bool {
+        self.blacklist.iter().any(|entry| {
+            entry.is_match(full_path)
+        })
+    }
+
     pub fn load(file: &str) -> Result<Config, FlError> {
         let config_yaml = load_yaml(file)?;
         let empty = Default::default();
@@ -28,14 +37,9 @@ impl Config {
             .unwrap_or(&empty)
             .into_iter()
             .flat_map(|(key, value)| {
-                let no_includes = vec![];
                 let name = key.as_str().unwrap_or("").to_owned();
                 let prefix = value["prefix"].as_str().unwrap_or("").to_owned();
-                let includes = value["includes"]
-                    .as_vec()
-                    .unwrap_or(&no_includes)
-                    .into_iter()
-                    .flat_map(|entry| entry.as_str().map(|x| x.to_owned()));
+                let includes = yaml_str_list(&value["includes"]);
 
                 if name.is_empty() {
                     None
@@ -43,15 +47,27 @@ impl Config {
                     Some(PackageType {
                         name,
                         prefix,
-                        includes: includes.collect(),
+                        includes: includes,
                     })
                 }
             });
 
-        let config = Config {
-            package_types: package_types.collect(),
-        };
-        config.validate().map(Err).unwrap_or(Ok(config))
+        let blacklist: Result<Vec<Regex>, _> = yaml_str_list(&config_yaml["blacklist"])
+            .iter()
+            .map(|entry| {
+                Regex::new(entry)
+                    .map_err(|_| ConfigValidation(format!("invalid blacklist entry: '{}'", entry)))
+            })
+            .collect();
+
+        blacklist.and_then(|bl| {
+            let config = Config {
+                package_types: package_types.collect(),
+                blacklist: bl,
+            };
+
+            config.validate().map(Err).unwrap_or(Ok(config))
+        })
     }
 
     fn package_exists(&self, package_name: &str) -> bool {
@@ -71,18 +87,22 @@ impl Config {
                         .iter()
                         .find(|include| !self.package_exists(include));
 
-                    unknown_include.map(|include| {
-                        let err =
-                            format!("package '{}': unknown include '{}'", package.name, include);
-                        ConfigValidation(err.to_owned())
-                    }).or_else(|| {
-                        if package.prefix.is_empty() {
-                            let err = format!("package '{}': empty prefix", package.name);
-                            Some(ConfigValidation(err.to_owned()))
-                        } else {
-                            None
-                        }
-                    })
+                    unknown_include
+                        .map(|include| {
+                            let err = format!(
+                                "package '{}': unknown include '{}'",
+                                package.name, include
+                            );
+                            ConfigValidation(err.to_owned())
+                        })
+                        .or_else(|| {
+                            if package.prefix.is_empty() {
+                                let err = format!("package '{}': empty prefix", package.name);
+                                Some(ConfigValidation(err.to_owned()))
+                            } else {
+                                None
+                            }
+                        })
                 }
             })
     }

@@ -5,12 +5,8 @@ extern crate yaml_rust;
 mod cli;
 mod config;
 mod error;
+mod pubspec;
 mod util;
-
-#[derive(Debug)]
-pub struct Package {
-    pub name: String,
-}
 
 fn main() {
     let opts = cli::get_opts();
@@ -20,7 +16,12 @@ fn main() {
                 eprintln!("no package types configured");
                 std::process::exit(1);
             }
-            println!("{:?}", config);
+
+            for yaml in pubspec::find_pubspecs(&opts.root_dir) {
+                if !config.is_blacklisted(&yaml) {
+                    println!("{}", yaml);
+                }
+            }
         }
         Err(err) => {
             eprintln!("failed to load configuration: {}", err);
