@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 use yaml_rust::Yaml;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Pubspec {
     pub name: String,
     pub path: String,
@@ -19,7 +19,7 @@ pub struct Pubspec {
     pub dependencies: Vec<Dependency>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Dependency {
     Local {
         name: String,
@@ -75,7 +75,7 @@ impl Pubspec {
             .collect()
     }
 
-    fn resolve_dependency(&self, dep: &Dependency, packages: &Vec<Pubspec>) -> Option<Pubspec> {
+    fn resolve_dependency<'a>(&self, dep: &Dependency, packages: &'a Vec<Pubspec>) -> Option<&'a Pubspec> {
         match dep {
             Dependency::Local { name: _, path } => {
                 let full_path = PathBuf::from(format!("{}/{}", self.dir_path, path));
@@ -85,7 +85,7 @@ impl Pubspec {
                     .iter()
                     .find(|pubspec| pubspec.dir_path == full_str)?;
 
-                Some(pubspec.clone())
+                Some(pubspec)
             }
             _ => None,
         }
