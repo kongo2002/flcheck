@@ -6,18 +6,20 @@ use crate::error::PackageValidation;
 use crate::util::load_yaml;
 use crate::Config;
 use crate::FlError::ConfigValidation;
+use std::path::PathBuf;
 use walkdir::WalkDir;
 use yaml_rust::Yaml;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Pubspec {
     pub name: String,
     pub path: String,
     pub dir_name: String,
+    pub dir_path: String,
     pub dependencies: Vec<Dependency>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Dependency {
     Local {
         name: String,
@@ -30,24 +32,34 @@ pub enum Dependency {
     },
 }
 
+impl Dependency {
+    pub fn name(&self) -> &String {
+        match self {
+            Dependency::Local { name, path: _ } => name,
+            Dependency::Git {
+                name,
+                path: _,
+                git: _,
+            } => name,
+        }
+    }
+}
+
 impl Pubspec {
     pub fn load(path: &str) -> Result<Pubspec, FlError> {
         let yaml = load_yaml(path)?;
         let name = yaml["name"].as_str().unwrap_or("").to_owned();
-        let full_path = std::path::Path::new(path);
 
-        full_path
-            .parent()
-            .and_then(|d| d.file_name())
-            .and_then(|f| f.to_str())
+        pubspec_dir(path)
             .ok_or(ConfigValidation(format!(
                 "cannot determine parent directory for {}",
                 path
             )))
-            .map(|dir_name| Pubspec {
+            .map(|(dir_name, dir_path)| Pubspec {
                 name: name,
                 path: path.to_owned(),
-                dir_name: dir_name.to_owned(),
+                dir_name: dir_name,
+                dir_path: dir_path,
                 dependencies: get_dependencies(&yaml),
             })
     }
@@ -63,34 +75,72 @@ impl Pubspec {
             .collect()
     }
 
+    fn resolve_dependency(&self, dep: &Dependency, packages: &Vec<Pubspec>) -> Option<Pubspec> {
+        match dep {
+            Dependency::Local { name: _, path } => {
+                let full_path = PathBuf::from(format!("{}/{}", self.dir_path, path));
+                let canonicalized = std::fs::canonicalize(full_path).ok()?;
+                let full_str = canonicalized.to_str()?;
+                let pubspec = packages
+                    .iter()
+                    .find(|pubspec| pubspec.dir_path == full_str)?;
+
+                Some(pubspec.clone())
+            }
+            _ => None,
+        }
+    }
+
     fn valid_dependency(
         &self,
         dep: &Dependency,
         config: &Config,
         packages: &Vec<Pubspec>,
     ) -> Option<PackageValidation> {
-        let valid_includes: Vec<_> = config
+        let valid_prefixes: Vec<_> = config
             .package_types
             .iter()
             .filter(|pkg_type| self.dir_name.starts_with(&pkg_type.prefix))
-            .flat_map(|include| valid_includes(include, config))
+            .flat_map(|include| valid_include_prefixes(include, config))
             .collect();
 
-        // TODO
-        None
+        match self.resolve_dependency(dep, packages) {
+            None => Some(PackageValidation {
+                package_name: self.name.clone(),
+                error: format!("unable to find dependency {}", dep.name()),
+            }),
+            Some(dep_pubspec) => {
+                let non_valid = !valid_prefixes
+                    .iter()
+                    .any(|prefix| dep_pubspec.dir_name.starts_with(prefix));
+                if non_valid {
+                    Some(PackageValidation {
+                        package_name: self.name.clone(),
+                        error: format!(
+                            "dependency to {} is not allowed",
+                            dep.name()
+                        ),
+                    })
+                } else {
+                    None
+                }
+            }
+        }
     }
 }
 
-fn valid_includes(pkg_type: &PackageType, config: &Config) -> Vec<String> {
+fn valid_include_prefixes(pkg_type: &PackageType, config: &Config) -> Vec<String> {
     let mut prefixes = vec![];
     config.package_types.iter().for_each(|pkg| {
         if pkg_type.includes.iter().any(|inc| *inc == pkg.name) {
             if !prefixes.contains(&pkg.prefix) {
                 prefixes.push(pkg.prefix.clone());
 
-                for prefix in valid_includes(pkg, config) {
-                    if !prefixes.contains(&prefix) {
-                        prefixes.push(prefix);
+                if pkg.name != pkg_type.name {
+                    for prefix in valid_include_prefixes(pkg, config) {
+                        if !prefixes.contains(&prefix) {
+                            prefixes.push(prefix);
+                        }
                     }
                 }
             }
@@ -181,4 +231,15 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
     }
 
     None
+}
+
+fn pubspec_dir(path: &str) -> Option<(String, String)> {
+    let full_path = std::path::Path::new(path);
+    let dir_name = full_path
+        .parent()
+        .and_then(|d| d.file_name())
+        .and_then(|f| f.to_str())?;
+    let full_dir = full_path.parent().and_then(|f| f.to_str())?;
+
+    Some((dir_name.to_owned(), full_dir.to_owned()))
 }

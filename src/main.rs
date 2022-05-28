@@ -24,7 +24,7 @@ fn run(opts: Opts) -> Result<(), FlError> {
         println!("{:?}", pubspec);
 
         for val in pubspec.validate(&config, &pubspecs) {
-            println!("{:?}", val)
+            eprintln!("{:?}", val)
         }
     }
 
