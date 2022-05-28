@@ -1,7 +1,11 @@
 extern crate walkdir;
 
+use crate::config::PackageType;
 use crate::error::FlError;
+use crate::error::PackageValidation;
 use crate::util::load_yaml;
+use crate::Config;
+use crate::FlError::ConfigValidation;
 use walkdir::WalkDir;
 use yaml_rust::Yaml;
 
@@ -9,6 +13,7 @@ use yaml_rust::Yaml;
 pub struct Pubspec {
     pub name: String,
     pub path: String,
+    pub dir_name: String,
     pub dependencies: Vec<Dependency>,
 }
 
@@ -29,13 +34,69 @@ impl Pubspec {
     pub fn load(path: &str) -> Result<Pubspec, FlError> {
         let yaml = load_yaml(path)?;
         let name = yaml["name"].as_str().unwrap_or("").to_owned();
+        let full_path = std::path::Path::new(path);
 
-        Ok(Pubspec {
-            name: name,
-            path: path.to_owned(),
-            dependencies: get_dependencies(&yaml),
-        })
+        full_path
+            .parent()
+            .and_then(|d| d.file_name())
+            .and_then(|f| f.to_str())
+            .ok_or(ConfigValidation(format!(
+                "cannot determine parent directory for {}",
+                path
+            )))
+            .map(|dir_name| Pubspec {
+                name: name,
+                path: path.to_owned(),
+                dir_name: dir_name.to_owned(),
+                dependencies: get_dependencies(&yaml),
+            })
     }
+
+    pub fn validate(&self, config: &Config, packages: &Vec<Pubspec>) -> Vec<PackageValidation> {
+        if config.is_blacklisted(&self.path) {
+            return vec![];
+        }
+
+        self.dependencies
+            .iter()
+            .flat_map(|dep| self.valid_dependency(dep, config, packages))
+            .collect()
+    }
+
+    fn valid_dependency(
+        &self,
+        dep: &Dependency,
+        config: &Config,
+        packages: &Vec<Pubspec>,
+    ) -> Option<PackageValidation> {
+        let valid_includes: Vec<_> = config
+            .package_types
+            .iter()
+            .filter(|pkg_type| self.dir_name.starts_with(&pkg_type.prefix))
+            .flat_map(|include| valid_includes(include, config))
+            .collect();
+
+        // TODO
+        None
+    }
+}
+
+fn valid_includes(pkg_type: &PackageType, config: &Config) -> Vec<String> {
+    let mut prefixes = vec![];
+    config.package_types.iter().for_each(|pkg| {
+        if pkg_type.includes.iter().any(|inc| *inc == pkg.name) {
+            if !prefixes.contains(&pkg.prefix) {
+                prefixes.push(pkg.prefix.clone());
+
+                for prefix in valid_includes(pkg, config) {
+                    if !prefixes.contains(&prefix) {
+                        prefixes.push(prefix);
+                    }
+                }
+            }
+        }
+    });
+    prefixes
 }
 
 pub fn find_pubspecs(root_dir: &str) -> Vec<String> {

@@ -9,3 +9,9 @@ pub enum FlError {
     ConfigValidation(String),
 }
 
+#[derive(Debug)]
+pub struct PackageValidation {
+    pub package_name: String,
+    pub error: String,
+}
+

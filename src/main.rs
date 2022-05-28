@@ -14,14 +14,18 @@ mod util;
 fn run(opts: Opts) -> Result<(), FlError> {
     let config = Config::load(&opts.config_file)?;
 
-    let pubspecs: Result<Vec<Pubspec>, _> = pubspec::find_pubspecs(&opts.root_dir)
+    let loaded_pubspecs: Result<Vec<Pubspec>, _> = pubspec::find_pubspecs(&opts.root_dir)
         .iter()
-        .filter(|path| !config.is_blacklisted(path))
         .map(|pubspec| Pubspec::load(pubspec))
         .collect();
+    let pubspecs = loaded_pubspecs?;
 
-    for pubspec in pubspecs?.iter() {
+    for pubspec in pubspecs.iter() {
         println!("{:?}", pubspec);
+
+        for val in pubspec.validate(&config, &pubspecs) {
+            println!("{:?}", val)
+        }
     }
 
     Ok(())
