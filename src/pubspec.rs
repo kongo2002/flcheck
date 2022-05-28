@@ -71,11 +71,22 @@ impl Pubspec {
 
         self.dependencies
             .iter()
-            .flat_map(|dep| self.valid_dependency(dep, config, packages))
+            .flat_map(|dep| {
+                vec![
+                    self.allowed_dependency(dep, config, packages),
+                    self.cyclic_dependency(dep, packages, vec![self.dir_path.clone()]),
+                ]
+                .into_iter()
+                .flatten()
+            })
             .collect()
     }
 
-    fn resolve_dependency<'a>(&self, dep: &Dependency, packages: &'a Vec<Pubspec>) -> Option<&'a Pubspec> {
+    fn resolve_dependency<'a>(
+        &self,
+        dep: &Dependency,
+        packages: &'a Vec<Pubspec>,
+    ) -> Option<&'a Pubspec> {
         match dep {
             Dependency::Local { name: _, path } => {
                 let full_path = PathBuf::from(format!("{}/{}", self.dir_path, path));
@@ -91,7 +102,49 @@ impl Pubspec {
         }
     }
 
-    fn valid_dependency(
+    fn cyclic_dependency(
+        &self,
+        dep: &Dependency,
+        packages: &Vec<Pubspec>,
+        seen: Vec<String>,
+    ) -> Option<PackageValidation> {
+        match self.resolve_dependency(dep, packages) {
+            Some(rev_dep) => {
+                if let Some(idx) = seen.iter().position(|d| *d == rev_dep.dir_path) {
+                    // we only want to report the cyclic dependency for the involved packages only
+                    if self.dir_path != rev_dep.dir_path {
+                        return None;
+                    }
+
+                    let mut route = seen.clone();
+                    let mut prepared: Vec<_> = route
+                        .drain(idx..)
+                        .flat_map(|path| file_name(&path))
+                        .collect();
+                    prepared.push(rev_dep.dir_name.clone());
+
+                    return Some(PackageValidation {
+                        package_name: self.name.clone(),
+                        error: format!("cyclic dependency {}", prepared.join(" -> ")),
+                    });
+                } else {
+                    for inner_dep in rev_dep.dependencies.iter() {
+                        let mut dep_path = seen.clone();
+                        dep_path.push(rev_dep.dir_path.clone());
+
+                        let cyclic = self.cyclic_dependency(inner_dep, packages, dep_path);
+                        if cyclic.is_some() {
+                            return cyclic;
+                        }
+                    }
+                    return None;
+                }
+            }
+            None => None,
+        }
+    }
+
+    fn allowed_dependency(
         &self,
         dep: &Dependency,
         config: &Config,
@@ -116,10 +169,7 @@ impl Pubspec {
                 if non_valid {
                     Some(PackageValidation {
                         package_name: self.name.clone(),
-                        error: format!(
-                            "dependency to {} is not allowed",
-                            dep.name()
-                        ),
+                        error: format!("dependency to {} is not allowed", dep.name()),
                     })
                 } else {
                     None
@@ -231,6 +281,13 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
     }
 
     None
+}
+
+fn file_name(path: &str) -> Option<String> {
+    PathBuf::from(path)
+        .file_name()
+        .and_then(|path| path.to_str())
+        .map(|path| path.to_owned())
 }
 
 fn pubspec_dir(path: &str) -> Option<(String, String)> {

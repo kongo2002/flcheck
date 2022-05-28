@@ -21,8 +21,6 @@ fn run(opts: Opts) -> Result<(), FlError> {
     let pubspecs = loaded_pubspecs?;
 
     for pubspec in pubspecs.iter() {
-        println!("{:?}", pubspec);
-
         for val in pubspec.validate(&config, &pubspecs) {
             eprintln!("{:?}", val)
         }

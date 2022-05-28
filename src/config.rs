@@ -36,7 +36,7 @@ impl Config {
             .into_iter()
             .flat_map(|(key, value)| {
                 let name = key.as_str().unwrap_or("").to_owned();
-                let prefix = value["prefix"].as_str().unwrap_or("").to_owned();
+                let prefix = value["dir_prefix"].as_str().unwrap_or("").to_owned();
                 let includes = yaml_str_list(&value["includes"]);
 
                 if name.is_empty() {
