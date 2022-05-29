@@ -7,6 +7,11 @@ pub enum FlError {
     YamlReadError(#[from] yaml_rust::ScanError),
     #[error("invalid configuration: {0}")]
     ConfigValidation(String),
+    #[error("validation: {0} error(s)")]
+    ValidationError(u32),
+    #[error("no input files found (directory: {0})")]
+    NoInputFiles(String),
+
 }
 
 #[derive(Debug)]

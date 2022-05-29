@@ -1,7 +1,9 @@
-use crate::cli::Opts;
+use crate::cli::{OptCommand, Opts};
 use crate::config::Config;
 use crate::error::FlError;
 use crate::pubspec::Pubspec;
+use crate::FlError::NoInputFiles;
+use crate::FlError::ValidationError;
 
 extern crate yaml_rust;
 
@@ -18,15 +20,31 @@ fn run(opts: Opts) -> Result<(), FlError> {
         .iter()
         .map(|pubspec| Pubspec::load(pubspec))
         .collect();
-    let pubspecs = loaded_pubspecs?;
 
+    let pubspecs = loaded_pubspecs?;
+    if pubspecs.is_empty() {
+        return Err(NoInputFiles(opts.root_dir));
+    }
+
+    match opts.command {
+        OptCommand::Validate => validate(config, pubspecs),
+    }
+}
+
+fn validate(config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
+    let mut num_errors = 0u32;
     for pubspec in pubspecs.iter() {
         for val in pubspec.validate(&config, &pubspecs) {
+            num_errors += 1;
             eprintln!("{:?}", val)
         }
     }
 
-    Ok(())
+    if num_errors > 0 {
+        Err(ValidationError(num_errors))
+    } else {
+        Ok(())
+    }
 }
 
 fn main() {
