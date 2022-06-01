@@ -30,6 +30,10 @@ pub enum Dependency {
         git: String,
         path: String,
     },
+    Public {
+        name: String,
+        version: String,
+    },
 }
 
 impl Dependency {
@@ -41,6 +45,7 @@ impl Dependency {
                 path: _,
                 git: _,
             } => name,
+            Dependency::Public { name, version: _ } => name,
         }
     }
 }
@@ -280,7 +285,15 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
         });
     }
 
-    None
+    // try public (external) dependency at last
+    value
+        .as_str()
+        .map(|str| str.to_owned())
+        .or_else(|| value.as_f64().map(|num| format!("{}", num)))
+        .map(|version| Dependency::Public {
+            name: key.to_owned(),
+            version: version,
+        })
 }
 
 fn file_name(path: &str) -> Option<String> {

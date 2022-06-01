@@ -6,6 +6,7 @@ use getopts::Options;
 
 pub enum OptCommand {
     Validate,
+    Dump,
 }
 
 pub struct Opts {
@@ -69,6 +70,7 @@ impl OptCommand {
     pub fn from(value: &str) -> Option<OptCommand> {
         match value {
             "validate" => Some(OptCommand::Validate),
+            "dump" => Some(OptCommand::Dump),
             _ => None,
         }
     }

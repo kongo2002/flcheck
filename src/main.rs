@@ -28,7 +28,16 @@ fn run(opts: Opts) -> Result<(), FlError> {
 
     match opts.command {
         OptCommand::Validate => validate(config, pubspecs),
+        OptCommand::Dump => dump(pubspecs),
     }
+}
+
+fn dump(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
+    for pubspec in pubspecs {
+        // TODO: implement proper Display
+        println!("{:?}", pubspec)
+    }
+    Ok(())
 }
 
 fn validate(config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
