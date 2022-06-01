@@ -1,19 +1,21 @@
 use crate::cli::{OptCommand, Opts};
 use crate::config::Config;
 use crate::error::FlError;
-use crate::pubspec::Pubspec;
+use crate::pubspec::{Dependency, Pubspec};
 use crate::FlError::NoInputFiles;
 use crate::FlError::ValidationError;
-
-extern crate yaml_rust;
+use futures::future::try_join_all;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 mod cli;
 mod config;
 mod error;
+mod pubdev;
 mod pubspec;
 mod util;
 
-fn run(opts: Opts) -> Result<(), FlError> {
+async fn run(opts: Opts) -> Result<(), FlError> {
     let config = Config::load(&opts.config_file)?;
 
     let loaded_pubspecs: Result<Vec<Pubspec>, _> = pubspec::find_pubspecs(&opts.root_dir)
@@ -29,7 +31,53 @@ fn run(opts: Opts) -> Result<(), FlError> {
     match opts.command {
         OptCommand::Validate => validate(config, pubspecs),
         OptCommand::Dump => dump(pubspecs),
+        OptCommand::Check => check(pubspecs).await,
     }
+}
+
+async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
+    let unique_packages = pubspecs
+        .iter()
+        .flat_map(|pkg| {
+            pkg.dependencies.iter().flat_map(|dep| match dep {
+                Dependency::Public { name, version: _ } => Some(name),
+                _ => None,
+            })
+        })
+        .collect::<HashSet<_>>();
+
+    let versions = try_join_all(
+        unique_packages
+            .iter()
+            .map(|package| pubdev::fetch_dep_versions(package)),
+    )
+    .await?;
+
+    let lookup = versions
+        .into_iter()
+        .map(|pubversion| (pubversion.name.clone(), pubversion))
+        .collect::<HashMap<_, _>>();
+
+    for pubspec in pubspecs {
+        println!("{}", pubspec.name);
+
+        for dep in pubspec.dependencies {
+            match dep {
+                Dependency::Public { name, version } => {
+                    let unknown = "<unknown>".to_owned();
+                    let pub_version = lookup.get(&name).and_then(|vsn| vsn.versions.last());
+                    println!(
+                        "  {}: {} [{}]",
+                        name,
+                        version,
+                        pub_version.unwrap_or(&unknown)
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
 }
 
 fn dump(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
@@ -56,10 +104,11 @@ fn validate(config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let opts = cli::get_opts();
 
-    if let Err(err) = run(opts) {
+    if let Err(err) = run(opts).await {
         eprintln!("{}", err);
         std::process::exit(1);
     }

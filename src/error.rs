@@ -5,6 +5,8 @@ pub enum FlError {
     FileReadError(#[from] std::io::Error),
     #[error("failed to parse YAML: {0}")]
     YamlReadError(#[from] yaml_rust::ScanError),
+    #[error("HTTP request failed: {0}")]
+    HttpError(#[from] reqwest::Error),
     #[error("invalid configuration: {0}")]
     ConfigValidation(String),
     #[error("validation: {0} error(s)")]
