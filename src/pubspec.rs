@@ -48,6 +48,13 @@ impl Dependency {
             Dependency::Public { name, version: _ } => name,
         }
     }
+
+    pub fn is_public(&self) -> bool {
+        match self {
+            Dependency::Public { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl Pubspec {
@@ -155,6 +162,11 @@ impl Pubspec {
         config: &Config,
         packages: &Vec<Pubspec>,
     ) -> Option<PackageValidation> {
+        // public/external dependencies are allowed anyways
+        if dep.is_public() {
+            return None;
+        }
+
         let valid_prefixes: Vec<_> = config
             .package_types
             .iter()
