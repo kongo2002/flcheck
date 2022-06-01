@@ -64,13 +64,12 @@ async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
         for dep in pubspec.dependencies {
             match dep {
                 Dependency::Public { name, version } => {
-                    let unknown = "<unknown>".to_owned();
                     let pub_version = lookup.get(&name).and_then(|vsn| vsn.versions.last());
                     println!(
                         "  {}: {} [{}]",
                         name,
                         version,
-                        pub_version.unwrap_or(&unknown)
+                        pub_version.map_or("<unknown>", String::as_str)
                     );
                 }
                 _ => {}
