@@ -18,6 +18,21 @@ pub struct Opts {
     pub root_dir: String,
 }
 
+fn usage(opts: &Options, exec: &str) {
+    let brief = format!(
+        r#"Usage: {} COMMAND [OPTIONS]
+
+Commands:
+    validate - pubspec dependency validation
+    graph    - generate a dot dependency graph
+    check    - check all external dependencies' versions
+    dump     - dump package dependencies
+    example  - print example configuration"#,
+        exec
+    );
+    print!("{}", opts.usage(&brief));
+}
+
 pub fn get_opts() -> Opts {
     let args: Vec<String> = env::args().collect();
 
@@ -35,18 +50,7 @@ pub fn get_opts() -> Opts {
     };
 
     if matches.opt_present("h") {
-        let brief = format!(
-            r#"Usage: {} COMMAND [OPTIONS]
-
-Commands:
-    validate - pubspec dependency validation
-    graph    - generate a dot dependency graph
-    check    - check all external dependencies' versions
-    dump     - dump package dependencies
-    example  - print example configuration"#,
-            args[0]
-        );
-        print!("{}", opts.usage(&brief));
+        usage(&opts, &args[0]);
         std::process::exit(0);
     }
 
@@ -56,6 +60,8 @@ Commands:
     let cmd = match matches.free.len() {
         0 => {
             eprintln!("missing command");
+            eprintln!();
+            usage(&opts, &args[0]);
             std::process::exit(1)
         }
         _ => OptCommand::from(&matches.free[0]),
@@ -69,6 +75,8 @@ Commands:
         }
     } else {
         eprintln!("unknown command");
+        eprintln!();
+        usage(&opts, &args[0]);
         std::process::exit(1)
     }
 }
