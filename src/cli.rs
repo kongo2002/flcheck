@@ -9,6 +9,7 @@ pub enum OptCommand {
     Dump,
     Check,
     Graph,
+    ExampleConfig,
 }
 
 pub struct Opts {
@@ -38,7 +39,11 @@ pub fn get_opts() -> Opts {
             r#"Usage: {} COMMAND [OPTIONS]
 
 Commands:
-    validate - pubspec dependency validation"#,
+    validate - pubspec dependency validation
+    graph    - generate a dot dependency graph
+    check    - check all external dependencies' versions
+    dump     - dump package dependencies
+    example  - print example configuration"#,
             args[0]
         );
         print!("{}", opts.usage(&brief));
@@ -75,6 +80,7 @@ impl OptCommand {
             "dump" => Some(OptCommand::Dump),
             "check" => Some(OptCommand::Check),
             "graph" => Some(OptCommand::Graph),
+            "example" => Some(OptCommand::ExampleConfig),
             _ => None,
         }
     }

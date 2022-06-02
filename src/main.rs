@@ -13,6 +13,11 @@ mod pubspec;
 mod util;
 
 async fn run(opts: Opts) -> Result<(), FlError> {
+    if matches!(opts.command, OptCommand::ExampleConfig) {
+        command::example_config();
+        return Ok(());
+    }
+
     let config = Config::load(&opts.config_file)?;
 
     let loaded_pubspecs: Result<Vec<Pubspec>, _> = pubspec::find_pubspecs(&opts.root_dir)
@@ -30,6 +35,7 @@ async fn run(opts: Opts) -> Result<(), FlError> {
         OptCommand::Dump => command::dump(pubspecs),
         OptCommand::Check => command::check(pubspecs).await,
         OptCommand::Graph => command::graph(pubspecs),
+        OptCommand::ExampleConfig => unreachable!(),
     }
 }
 

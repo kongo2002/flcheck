@@ -33,7 +33,6 @@ pub fn graph(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     }
 
     println!("}}");
-
     Ok(())
 }
 
@@ -103,4 +102,56 @@ pub fn validate(config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     } else {
         Ok(())
     }
+}
+
+pub fn example_config() {
+    println!(r#"# Package types list rules for packages that describe
+# what package is allowed to depend on each other.
+#
+# The typical recommended setup is a hierachy like the following:
+# - main: the main app that is shipped and distributed to app stores and
+#   assembles the functionalities of one or multiple (sub) apps
+# - app: one or multiple (sub) apps that encapsulate functionalities of
+#   usually one domain per app - must not depend on each other
+# - shared: few shared libraries that can be used the glue together
+#   multiple apps, e.g. for routing, navigation - must import packages
+#   and other shared libraries only
+# - package: general purpose libraries (e.g. utilities) that do not contain
+#   domain specific logic, may be included from any package type/layer
+package_types:
+
+  main:
+    # the dir_prefix is used to associate every dart package to one
+    # of the package types listed here, is applied to the directory
+    # name of the package
+    dir_prefix: main
+    # list of package types all packages of this type may import from
+    # (here: main is allowed to import all apps and everything that apps
+    # are allowed to import themselves)
+    includes:
+      - app
+
+  app:
+    dir_prefix: app_
+    includes:
+      - shared
+
+  shared:
+    dir_prefix: shared_
+    includes:
+      - shared
+      - package
+
+  package:
+    dir_prefix: pkg_
+    includes:
+      - package
+
+# List of patterns (regular expressions) that match package directories
+# that should be excluded from all validations and checks.
+# Here: exclude all auto-generated "example" packages from native dart
+# packages.
+blacklist:
+  - '/example'
+"#);
 }
