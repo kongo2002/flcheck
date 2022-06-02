@@ -118,3 +118,6 @@ package_types:
 blacklist:
   - '/example'
 ```
+
+
+[actions]: https://github.com/kongo2002/flcheck/actions/
