@@ -93,7 +93,7 @@ impl Config {
                     })
                     .or_else(|| {
                         if package.prefix.is_empty() {
-                            let err = format!("package '{}': empty prefix", package.name);
+                            let err = format!("package '{}': empty dir_prefix", package.name);
                             Some(ConfigValidation(err.to_owned()))
                         } else {
                             None

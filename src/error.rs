@@ -3,6 +3,8 @@
 pub enum FlError {
     #[error("failed to read file: {0}")]
     FileReadError(#[from] std::io::Error),
+    #[error("no configuration file found (tried: {0})")]
+    NoConfigFound(String),
     #[error("failed to parse YAML: {0}")]
     YamlReadError(#[from] yaml_rust::ScanError),
     #[error("HTTP request failed: {0}")]
