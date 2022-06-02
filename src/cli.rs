@@ -8,6 +8,7 @@ pub enum OptCommand {
     Validate,
     Dump,
     Check,
+    Graph,
 }
 
 pub struct Opts {
@@ -73,6 +74,7 @@ impl OptCommand {
             "validate" => Some(OptCommand::Validate),
             "dump" => Some(OptCommand::Dump),
             "check" => Some(OptCommand::Check),
+            "graph" => Some(OptCommand::Graph),
             _ => None,
         }
     }

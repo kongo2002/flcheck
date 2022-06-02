@@ -32,7 +32,33 @@ async fn run(opts: Opts) -> Result<(), FlError> {
         OptCommand::Validate => validate(config, pubspecs),
         OptCommand::Dump => dump(pubspecs),
         OptCommand::Check => check(pubspecs).await,
+        OptCommand::Graph => graph(pubspecs),
     }
+}
+
+fn graph(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
+    println!("digraph dependencies {{");
+    println!("  ranksep =\"2.0 equally\";");
+
+    for pubspec in pubspecs {
+        println!("  {} []", pubspec.name);
+
+        for dep in pubspec.dependencies {
+            match dep {
+                Dependency::Local { name, path: _ } => println!("  {} -> {};", pubspec.name, name),
+                Dependency::Git {
+                    name,
+                    path: _,
+                    git: _,
+                } => println!("  {} -> {};", pubspec.name, name),
+                _ => {}
+            }
+        }
+    }
+
+    println!("}}");
+
+    Ok(())
 }
 
 async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
