@@ -28,7 +28,8 @@ checking that certain dependency rules are met at all times.
 
 ### Print dot dependency graph
 
-    $ flcheck graph -d /some/dir/of/apps
+    $ flcheck graph -d /some/dir/of/apps > dependencies.dot
+    $ dot -o dependencies.png -Tpng dependencies.dot
 
 
 ### Check external dependency versions
