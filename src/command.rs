@@ -124,7 +124,7 @@ package_types:
     # the dir_prefix is used to associate every dart package to one
     # of the package types listed here, is applied to the directory
     # name of the package
-    dir_prefix: main
+    dir_prefix: 'main'
     # list of package types all packages of this type may import from
     # (here: main is allowed to import all apps and everything that apps
     # are allowed to import themselves)
@@ -132,18 +132,18 @@ package_types:
       - app
 
   app:
-    dir_prefix: app_
+    dir_prefix: 'app_'
     includes:
       - shared
 
   shared:
-    dir_prefix: shared_
+    dir_prefix: 'shared_'
     includes:
       - shared
       - package
 
   package:
-    dir_prefix: pkg_
+    dir_prefix: 'pkg_'
     includes:
       - package
 
