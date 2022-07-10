@@ -1,9 +1,11 @@
 [package]
+authors = ["kongo2002 <kongo2002@gmail.com>"]
+homepage = "https://github.com/kongo2002/flcheck"
+repository = "https://github.com/kongo2002/flcheck"
+description = "CLI to check dependencies of flutter applications"
 name = "flcheck"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 futures = "0.3.21"
