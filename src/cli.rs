@@ -71,7 +71,7 @@ pub fn get_opts() -> Opts {
         Opts {
             command,
             config_file,
-            root_dir,
+            root_dir: canonicalize(&root_dir).unwrap_or(root_dir),
         }
     } else {
         eprintln!("unknown command");
@@ -79,6 +79,12 @@ pub fn get_opts() -> Opts {
         usage(&opts, &args[0]);
         std::process::exit(1)
     }
+}
+
+fn canonicalize(path: &String) -> Option<String> {
+    let canonicalized = std::fs::canonicalize(path).ok()?;
+    let canonical_str = canonicalized.to_str()?;
+    Some(canonical_str.to_owned())
 }
 
 impl OptCommand {
