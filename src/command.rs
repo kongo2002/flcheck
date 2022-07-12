@@ -1,12 +1,21 @@
+use crate::cli::OutputFormat;
+use crate::error::PackageValidation;
 use crate::pubdev::fetch_dep_versions;
 use crate::pubspec::Dependency;
 use crate::Config;
 use crate::FlError;
 use crate::FlError::ValidationError;
+use crate::Opts;
 use crate::Pubspec;
 use futures::future::try_join_all;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::collections::HashSet;
+
+#[derive(Serialize)]
+struct JsonValidationResult {
+    pub validations: Vec<PackageValidation>,
+}
 
 pub fn graph(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     println!("//");
@@ -88,14 +97,41 @@ pub fn dump(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     Ok(())
 }
 
-pub fn validate(config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
-    let mut num_errors = 0u32;
-    for pubspec in pubspecs.iter() {
-        for val in pubspec.validate(&config, &pubspecs) {
-            num_errors += 1;
-            eprintln!("{:?}", val)
+pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
+    let num_errors = match opts.output {
+        OutputFormat::Plain => {
+            let mut num_errors = 0u32;
+            for pubspec in pubspecs.iter() {
+                let validation_errors = pubspec.validate(&config, &pubspecs);
+
+                if opts.verbose {
+                    println!("Validating pubspec '{}' ({})", pubspec.name, pubspec.path);
+                }
+
+                for val in validation_errors {
+                    num_errors += 1;
+                    eprintln!("{:?}", val)
+                }
+            }
+            num_errors
         }
-    }
+        OutputFormat::Json => {
+            let validations = pubspecs
+                .iter()
+                .flat_map(|pubspec| pubspec.validate(&config, &pubspecs))
+                .collect::<Vec<_>>();
+
+            let num_errors = validations.len() as u32;
+            let json_output = JsonValidationResult { validations };
+
+            serde_json::to_string(&json_output)
+                .ok()
+                .iter()
+                .for_each(|json| println!("{}", json));
+
+            num_errors
+        }
+    };
 
     if num_errors > 0 {
         Err(ValidationError(num_errors))
@@ -105,7 +141,8 @@ pub fn validate(config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
 }
 
 pub fn example_config() {
-    println!(r#"# Package types list rules for packages that describe
+    println!(
+        r#"# Package types list rules for packages that describe
 # what package is allowed to depend on each other.
 #
 # The typical recommended setup is a hierachy like the following:
@@ -153,5 +190,6 @@ package_types:
 # packages.
 blacklist:
   - '/example'
-"#);
+"#
+    );
 }

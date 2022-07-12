@@ -1,3 +1,4 @@
+use serde::Serialize;
 
 #[derive(thiserror::Error, Debug)]
 pub enum FlError {
@@ -18,9 +19,10 @@ pub enum FlError {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct PackageValidation {
     pub package_name: String,
     pub error: String,
+    pub code: String,
 }
 

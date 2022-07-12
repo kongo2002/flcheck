@@ -12,10 +12,18 @@ pub enum OptCommand {
     ExampleConfig,
 }
 
+#[derive(PartialEq)]
+pub enum OutputFormat {
+    Plain,
+    Json,
+}
+
 pub struct Opts {
     pub command: OptCommand,
     pub config_file: String,
     pub root_dir: String,
+    pub verbose: bool,
+    pub output: OutputFormat,
 }
 
 fn usage(opts: &Options, exec: &str) {
@@ -39,6 +47,8 @@ pub fn get_opts() -> Opts {
     let mut opts = Options::new();
     opts.optopt("c", "config", "config file (default: flcheck.yaml)", "FILE");
     opts.optopt("d", "dir", "apps directory", "DIR");
+    opts.optopt("o", "output", "output format (plain, json)", "FORMAT");
+    opts.optflag("v", "verbose", "verbose output");
     opts.optflag("h", "help", "show help");
 
     let matches = match opts.parse(&args[1..]) {
@@ -56,6 +66,8 @@ pub fn get_opts() -> Opts {
 
     let config_file = matches.opt_str("c").unwrap_or("flcheck.yaml".to_owned());
     let root_dir = matches.opt_str("d").unwrap_or(".".to_owned());
+    let output_format = matches.opt_str("o").unwrap_or("plain".to_owned());
+    let verbose = matches.opt_present("v");
 
     let cmd = match matches.free.len() {
         0 => {
@@ -67,17 +79,37 @@ pub fn get_opts() -> Opts {
         _ => OptCommand::from(&matches.free[0]),
     };
 
+    let output = match parse_format(&output_format) {
+        Ok(fmt) => fmt,
+        Err(error) => {
+            eprintln!("{}", error);
+            eprintln!();
+            usage(&opts, &args[0]);
+            std::process::exit(1)
+        }
+    };
+
     if let Some(command) = cmd {
         Opts {
             command,
             config_file,
             root_dir: canonicalize(&root_dir).unwrap_or(root_dir),
+            verbose,
+            output,
         }
     } else {
         eprintln!("unknown command");
         eprintln!();
         usage(&opts, &args[0]);
         std::process::exit(1)
+    }
+}
+
+fn parse_format(value: &str) -> Result<OutputFormat, &str> {
+    match value {
+        "plain" => Ok(OutputFormat::Plain),
+        "json" => Ok(OutputFormat::Json),
+        _ => Err("invalid output format (valid: json, plain)")
     }
 }
 

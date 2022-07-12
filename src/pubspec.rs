@@ -138,6 +138,7 @@ impl Pubspec {
                     return Some(PackageValidation {
                         package_name: self.name.clone(),
                         error: format!("cyclic dependency {}", prepared.join(" -> ")),
+                        code: "validation:dependency:cyclic".to_owned(),
                     });
                 } else {
                     for inner_dep in rev_dep.dependencies.iter() {
@@ -178,6 +179,7 @@ impl Pubspec {
             None => Some(PackageValidation {
                 package_name: self.name.clone(),
                 error: format!("unable to find dependency {}", dep.name()),
+                code: "validation:dependency:unknown".to_owned(),
             }),
             Some(dep_pubspec) => {
                 let non_valid = !valid_prefixes
@@ -187,6 +189,7 @@ impl Pubspec {
                     Some(PackageValidation {
                         package_name: self.name.clone(),
                         error: format!("dependency to {} is not allowed", dep.name()),
+                        code: "validation:dependency:unallowed".to_owned(),
                     })
                 } else {
                     None

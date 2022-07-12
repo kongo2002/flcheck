@@ -31,7 +31,7 @@ async fn run(opts: Opts) -> Result<(), FlError> {
     }
 
     match opts.command {
-        OptCommand::Validate => command::validate(config, pubspecs),
+        OptCommand::Validate => command::validate(opts, config, pubspecs),
         OptCommand::Dump => command::dump(pubspecs),
         OptCommand::Check => command::check(pubspecs).await,
         OptCommand::Graph => command::graph(pubspecs),
