@@ -29,13 +29,9 @@ pub fn graph(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
         println!("  {} []", pubspec.name);
 
         for dep in pubspec.dependencies {
-            match dep {
-                Dependency::Local { name, path: _ } => println!("  {} -> {};", pubspec.name, name),
-                Dependency::Git {
-                    name,
-                    path: _,
-                    git: _,
-                } => println!("  {} -> {};", pubspec.name, name),
+            match dep.effective() {
+                Dependency::Local { name, .. } => println!("  {} -> {};", pubspec.name, name),
+                Dependency::Git { name, .. } => println!("  {} -> {};", pubspec.name, name),
                 _ => {}
             }
         }
@@ -50,7 +46,7 @@ pub async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
         .iter()
         .flat_map(|pkg| {
             pkg.dependencies.iter().flat_map(|dep| match dep {
-                Dependency::Public { name, version: _ } => Some(name),
+                Dependency::Public { name, .. } => Some(name),
                 _ => None,
             })
         })
@@ -73,7 +69,7 @@ pub async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
 
         for dep in pubspec.dependencies {
             match dep {
-                Dependency::Public { name, version } => {
+                Dependency::Public { name, version, .. } => {
                     let pub_version = lookup.get(&name).map(|vsn| &vsn.latest);
                     println!(
                         "  {}: {} [{}]",

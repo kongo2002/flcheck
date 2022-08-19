@@ -24,28 +24,58 @@ pub enum Dependency {
     Local {
         name: String,
         path: String,
+        overridden: Box<Option<Dependency>>,
     },
     Git {
         name: String,
         git: String,
         path: String,
+        overridden: Box<Option<Dependency>>,
     },
     Public {
         name: String,
         version: String,
+        overridden: Box<Option<Dependency>>,
     },
 }
 
 impl Dependency {
     pub fn name(&self) -> &String {
         match self {
-            Dependency::Local { name, path: _ } => name,
-            Dependency::Git {
+            Dependency::Local { name, .. } => name,
+            Dependency::Git { name, .. } => name,
+            Dependency::Public { name, .. } => name,
+        }
+    }
+
+    pub fn with_override(self, override_dependency: Dependency) -> Self {
+        match self {
+            Dependency::Local { name, path, .. } => Dependency::Local {
                 name,
-                path: _,
-                git: _,
-            } => name,
-            Dependency::Public { name, version: _ } => name,
+                path,
+                overridden: Box::new(Some(override_dependency)),
+            },
+            Dependency::Git {
+                name, path, git, ..
+            } => Dependency::Git {
+                name,
+                path,
+                git,
+                overridden: Box::new(Some(override_dependency)),
+            },
+            Dependency::Public { name, version, .. } => Dependency::Public {
+                name,
+                version,
+                overridden: Box::new(Some(override_dependency)),
+            },
+        }
+    }
+
+    pub fn effective(&self) -> &Dependency {
+        match self {
+            Dependency::Local { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
+            Dependency::Git { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
+            Dependency::Public { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
         }
     }
 
@@ -99,8 +129,8 @@ impl Pubspec {
         dep: &Dependency,
         packages: &'a Vec<Pubspec>,
     ) -> Option<&'a Pubspec> {
-        match dep {
-            Dependency::Local { name: _, path } => {
+        match dep.effective() {
+            Dependency::Local { path, .. } => {
                 let full_path = PathBuf::from(format!("{}/{}", self.dir_path, path));
                 let canonicalized = std::fs::canonicalize(full_path).ok()?;
                 let full_str = canonicalized.to_str()?;
@@ -265,11 +295,14 @@ fn get_dependencies(yaml: &Yaml) -> Vec<Dependency> {
             // we found a "normal" dependency
             // before collecting this one, we have to check if there is
             // a dependency override set for that same dependency
-            if let Some(dep_override) = extract_dependency(key, &dependency_overrides[key]) {
-                deps.push(dep_override);
-            } else {
-                deps.push(dep);
-            }
+            let new_dependency =
+                if let Some(dep_override) = extract_dependency(key, &dependency_overrides[key]) {
+                    dep.with_override(dep_override)
+                } else {
+                    dep
+                };
+
+            deps.push(new_dependency);
         }
     }
 
@@ -284,6 +317,7 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
         return Some(Dependency::Local {
             name: key.to_owned(),
             path: path.to_owned(),
+            overridden: Box::new(None),
         });
     }
 
@@ -297,6 +331,7 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
             name: key.to_owned(),
             git: git_url.to_owned(),
             path: git_path.to_owned(),
+            overridden: Box::new(None),
         });
     }
 
@@ -308,6 +343,7 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
         .map(|version| Dependency::Public {
             name: key.to_owned(),
             version: version,
+            overridden: Box::new(None),
         })
 }
 
