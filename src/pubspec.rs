@@ -79,6 +79,13 @@ impl Dependency {
         }
     }
 
+    pub fn is_git(&self) -> bool {
+        match self {
+            Dependency::Git { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_public(&self) -> bool {
         match self {
             Dependency::Public { .. } => true,
@@ -198,10 +205,16 @@ impl Pubspec {
             return None;
         }
 
+        // git dependencies are allowed/ignore for now
+        // TODO: we might need a concept to identify "internal" git dependencies
+        if dep.is_git() {
+            return None
+        }
+
         let valid_prefixes: Vec<_> = config
             .package_types
             .iter()
-            .filter(|pkg_type| self.dir_name.starts_with(&pkg_type.prefix))
+            .filter(|pkg_type| pkg_type.matches_prefix(&self.dir_name))
             .flat_map(|include| valid_include_prefixes(include, config))
             .collect();
 
@@ -233,13 +246,15 @@ fn valid_include_prefixes(pkg_type: &PackageType, config: &Config) -> Vec<String
     let mut prefixes = vec![];
     config.package_types.iter().for_each(|pkg| {
         if pkg_type.includes.iter().any(|inc| *inc == pkg.name) {
-            if !prefixes.contains(&pkg.prefix) {
-                prefixes.push(pkg.prefix.clone());
+            for prefix in pkg.prefixes.iter() {
+                if !prefixes.contains(prefix) {
+                    prefixes.push(prefix.clone());
 
-                if pkg.name != pkg_type.name {
-                    for prefix in valid_include_prefixes(pkg, config) {
-                        if !prefixes.contains(&prefix) {
-                            prefixes.push(prefix);
+                    if pkg.name != pkg_type.name {
+                        for iprefix in valid_include_prefixes(pkg, config) {
+                            if !prefixes.contains(&iprefix) {
+                                prefixes.push(iprefix);
+                            }
                         }
                     }
                 }

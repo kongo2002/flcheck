@@ -13,8 +13,14 @@ pub struct Config {
 #[derive(Debug)]
 pub struct PackageType {
     pub name: String,
-    pub prefix: String,
+    pub prefixes: Vec<String>,
     pub includes: Vec<String>,
+}
+
+impl PackageType {
+    pub fn matches_prefix(&self, dir_name: &str) -> bool {
+        self.prefixes.iter().any(|prefix| dir_name.starts_with(prefix))
+    }
 }
 
 impl Config {
@@ -36,15 +42,21 @@ impl Config {
             .into_iter()
             .flat_map(|(key, value)| {
                 let name = key.as_str().unwrap_or("").to_owned();
-                let prefix = value["dir_prefix"].as_str().unwrap_or("").to_owned();
                 let includes = yaml_str_list(&value["includes"]);
+
+                let prefix = value["dir_prefix"].as_str().unwrap_or("").to_owned();
+                let prefixes = if prefix.is_empty() {
+                    yaml_str_list(&value["dir_prefix"])
+                } else {
+                    vec![prefix]
+                };
 
                 if name.is_empty() {
                     None
                 } else {
                     Some(PackageType {
                         name,
-                        prefix,
+                        prefixes,
                         includes: includes,
                     })
                 }
@@ -92,7 +104,7 @@ impl Config {
                         ConfigValidation(err.to_owned())
                     })
                     .or_else(|| {
-                        if package.prefix.is_empty() {
+                        if package.prefixes.is_empty() {
                             let err = format!("package '{}': empty dir_prefix", package.name);
                             Some(ConfigValidation(err.to_owned()))
                         } else {
