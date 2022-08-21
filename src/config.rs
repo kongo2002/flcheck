@@ -3,6 +3,7 @@ use crate::error::FlError::ConfigValidation;
 use crate::util::load_yaml;
 use crate::util::yaml_str_list;
 use regex::Regex;
+use yaml_rust::Yaml;
 
 #[derive(Debug)]
 pub struct Config {
@@ -10,16 +11,34 @@ pub struct Config {
     blacklist: Vec<Regex>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PackageType {
     pub name: String,
     pub prefixes: Vec<String>,
     pub includes: Vec<String>,
 }
 
+impl PartialEq for Config {
+    fn eq(&self, other: &Self) -> bool {
+        self.package_types == other.package_types
+            && self
+                .blacklist
+                .iter()
+                .map(|rgx| rgx.as_str())
+                .collect::<Vec<_>>()
+                == other
+                    .blacklist
+                    .iter()
+                    .map(|rgx| rgx.as_str())
+                    .collect::<Vec<_>>()
+    }
+}
+
 impl PackageType {
     pub fn matches_prefix(&self, dir_name: &str) -> bool {
-        self.prefixes.iter().any(|prefix| dir_name.starts_with(prefix))
+        self.prefixes
+            .iter()
+            .any(|prefix| dir_name.starts_with(prefix))
     }
 }
 
@@ -34,6 +53,10 @@ impl Config {
 
     pub fn load(file: &str) -> Result<Config, FlError> {
         let config_yaml = load_yaml(file)?;
+        return Config::load_from_yaml(config_yaml);
+    }
+
+    fn load_from_yaml(config_yaml: Yaml) -> Result<Config, FlError> {
         let empty = Default::default();
 
         let package_types = config_yaml["package_types"]
@@ -86,7 +109,7 @@ impl Config {
 
     fn validate(self) -> Result<Config, FlError> {
         if !self.is_valid() {
-            return Err(ConfigValidation("no package types configured".to_owned()))
+            return Err(ConfigValidation("no package types configured".to_owned()));
         }
 
         self.package_types
@@ -115,5 +138,55 @@ impl Config {
             .next()
             .map(Err)
             .unwrap_or(Ok(self))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::PackageType;
+    use crate::Config;
+    use yaml_rust::YamlLoader;
+
+    #[test]
+    fn load_config_empty() {
+        let docs = YamlLoader::load_from_str("").unwrap();
+
+        assert_eq!(docs.is_empty(), true);
+    }
+
+    #[test]
+    fn load_config_no_package_types() {
+        let mut docs = YamlLoader::load_from_str("package_types:").unwrap();
+        let config = Config::load_from_yaml(docs.remove(0));
+
+        assert_eq!(config.is_err(), true);
+    }
+
+    #[test]
+    fn load_config_missing_dir_prefix() {
+        let mut docs =
+            YamlLoader::load_from_str("package_types:\n  app:\n    dir_prefix:").unwrap();
+        let config = Config::load_from_yaml(docs.remove(0));
+
+        assert_eq!(config.is_err(), true);
+    }
+
+    #[test]
+    fn load_config_minimal() {
+        let mut docs =
+            YamlLoader::load_from_str("package_types:\n  app:\n    dir_prefix: app").unwrap();
+        let config = Config::load_from_yaml(docs.remove(0)).unwrap();
+
+        assert_eq!(
+            config,
+            Config {
+                package_types: vec![PackageType {
+                    name: "app".to_owned(),
+                    prefixes: vec!["app".to_owned()],
+                    includes: Vec::new()
+                }],
+                blacklist: Vec::new()
+            }
+        )
     }
 }
