@@ -145,6 +145,7 @@ impl Config {
 mod tests {
     use crate::config::PackageType;
     use crate::Config;
+    use regex::Regex;
     use yaml_rust::YamlLoader;
 
     #[test]
@@ -164,8 +165,14 @@ mod tests {
 
     #[test]
     fn load_config_missing_dir_prefix() {
-        let mut docs =
-            YamlLoader::load_from_str("package_types:\n  app:\n    dir_prefix:").unwrap();
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix:
+    ",
+        )
+        .unwrap();
         let config = Config::load_from_yaml(docs.remove(0));
 
         assert_eq!(config.is_err(), true);
@@ -173,8 +180,14 @@ mod tests {
 
     #[test]
     fn load_config_minimal() {
-        let mut docs =
-            YamlLoader::load_from_str("package_types:\n  app:\n    dir_prefix: app").unwrap();
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix: app
+    ",
+        )
+        .unwrap();
         let config = Config::load_from_yaml(docs.remove(0)).unwrap();
 
         assert_eq!(
@@ -185,6 +198,97 @@ mod tests {
                     prefixes: vec!["app".to_owned()],
                     includes: Vec::new()
                 }],
+                blacklist: Vec::new()
+            }
+        )
+    }
+
+    #[test]
+    fn load_config_blacklist() {
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix: app
+blacklist:
+- one
+- two
+    ",
+        )
+        .unwrap();
+        let config = Config::load_from_yaml(docs.remove(0)).unwrap();
+
+        assert_eq!(
+            config,
+            Config {
+                package_types: vec![PackageType {
+                    name: "app".to_owned(),
+                    prefixes: vec!["app".to_owned()],
+                    includes: Vec::new()
+                }],
+                blacklist: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()]
+            }
+        )
+    }
+
+    #[test]
+    fn load_config_multiple_prefixes() {
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix:
+    - 'app-'
+    - 'app_'
+    ",
+        )
+        .unwrap();
+        let config = Config::load_from_yaml(docs.remove(0)).unwrap();
+
+        assert_eq!(
+            config,
+            Config {
+                package_types: vec![PackageType {
+                    name: "app".to_owned(),
+                    prefixes: vec!["app-".to_owned(), "app_".to_owned()],
+                    includes: Vec::new()
+                }],
+                blacklist: Vec::new()
+            }
+        )
+    }
+
+    #[test]
+    fn load_config_includes() {
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix: app
+  pkg:
+    dir_prefix: pkg
+    includes:
+    - app
+    ",
+        )
+        .unwrap();
+        let config = Config::load_from_yaml(docs.remove(0)).unwrap();
+
+        assert_eq!(
+            config,
+            Config {
+                package_types: vec![
+                    PackageType {
+                        name: "app".to_owned(),
+                        prefixes: vec!["app".to_owned()],
+                        includes: Vec::new()
+                    },
+                    PackageType {
+                        name: "pkg".to_owned(),
+                        prefixes: vec!["pkg".to_owned()],
+                        includes: vec!["app".to_owned()]
+                    }
+                ],
                 blacklist: Vec::new()
             }
         )
