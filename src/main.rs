@@ -32,7 +32,7 @@ async fn run(opts: Opts) -> Result<(), FlError> {
 
     match opts.command {
         OptCommand::Validate => command::validate(opts, config, pubspecs),
-        OptCommand::Dump => command::dump(pubspecs),
+        OptCommand::Dump => command::dump(opts, pubspecs),
         OptCommand::Check => command::check(pubspecs).await,
         OptCommand::Graph => command::graph(pubspecs),
         OptCommand::ExampleConfig => unreachable!(),

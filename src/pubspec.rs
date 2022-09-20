@@ -6,11 +6,12 @@ use crate::error::PackageValidation;
 use crate::util::load_yaml;
 use crate::Config;
 use crate::FlError::ConfigValidation;
+use serde::Serialize;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 use yaml_rust::Yaml;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Pubspec {
     pub name: String,
     pub path: String,
@@ -21,7 +22,7 @@ pub struct Pubspec {
     pub is_public: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Dependency {
     Local {
         name: String,
