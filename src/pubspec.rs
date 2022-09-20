@@ -120,17 +120,24 @@ impl Pubspec {
             return vec![];
         }
 
-        self.dependencies
-            .iter()
-            .flat_map(|dep| {
-                vec![
-                    self.allowed_dependency(dep, config, packages),
-                    self.cyclic_dependency(dep, packages, vec![self.dir_path.clone()]),
-                ]
+        let dependency_validations = self.dependencies.iter().flat_map(|dep| {
+            vec![
+                self.allowed_dependency(dep, config, packages),
+                self.cyclic_dependency(dep, packages, vec![self.dir_path.clone()]),
+            ]
+            .into_iter()
+            .flatten()
+        });
+
+        let dev_dependency_validations = self.dev_dependencies.iter().flat_map(|dep| {
+            vec![self.git_packages_in_dev_dependencies(dep)]
                 .into_iter()
                 .flatten()
-            })
-            .collect()
+        });
+
+        return dependency_validations
+            .chain(dev_dependency_validations)
+            .collect();
     }
 
     fn resolve_dependency<'a>(
@@ -174,11 +181,10 @@ impl Pubspec {
                         .collect();
                     prepared.push(rev_dep.dir_name.clone());
 
-                    return Some(PackageValidation {
-                        package_name: self.name.clone(),
-                        error: format!("cyclic dependency {}", prepared.join(" -> ")),
-                        code: "validation:dependency:cyclic".to_owned(),
-                    });
+                    return Some(self.validation(
+                        format!("cyclic dependency {}", prepared.join(" -> ")),
+                        "validation:dependency:cyclic",
+                    ));
                 } else {
                     for inner_dep in rev_dep.dependencies.iter() {
                         let mut dep_path = seen.clone();
@@ -193,6 +199,25 @@ impl Pubspec {
                 }
             }
             None => None,
+        }
+    }
+
+    fn git_packages_in_dev_dependencies(&self, dep: &Dependency) -> Option<PackageValidation> {
+        if dep.is_git() {
+            Some(self.validation(
+                format!("git dependency in dev_dependencies {}", dep.name()),
+                "validation:dev-dependency:git",
+            ))
+        } else {
+            None
+        }
+    }
+
+    fn validation(&self, error: String, code: &str) -> PackageValidation {
+        PackageValidation {
+            package_name: self.name.clone(),
+            error: error,
+            code: code.to_owned(),
         }
     }
 
@@ -221,21 +246,19 @@ impl Pubspec {
             .collect();
 
         match self.resolve_dependency(dep, packages) {
-            None => Some(PackageValidation {
-                package_name: self.name.clone(),
-                error: format!("unable to find dependency {}", dep.name()),
-                code: "validation:dependency:unknown".to_owned(),
-            }),
+            None => Some(self.validation(
+                format!("unable to find dependency {}", dep.name()),
+                "validation:dependency:unknown",
+            )),
             Some(dep_pubspec) => {
                 let non_valid = !valid_prefixes
                     .iter()
                     .any(|prefix| dep_pubspec.dir_name.starts_with(prefix));
                 if non_valid {
-                    Some(PackageValidation {
-                        package_name: self.name.clone(),
-                        error: format!("dependency to {} is not allowed", dep.name()),
-                        code: "validation:dependency:unallowed".to_owned(),
-                    })
+                    Some(self.validation(
+                        format!("dependency to {} is not allowed", dep.name()),
+                        "validation:dependency:unallowed",
+                    ))
                 } else {
                     None
                 }
