@@ -106,7 +106,7 @@ pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<()
 
                 for val in validation_errors {
                     num_errors += 1;
-                    eprintln!("{:?}", val)
+                    println!("{}: {} [{}]", val.package_name, val.error, val.code)
                 }
             }
             num_errors
