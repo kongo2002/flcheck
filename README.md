@@ -15,7 +15,9 @@ one larger intertwined mess of dependencies that are hard to maintain in the
 long run.
 
 The main purpose of *flcheck* is best to be integrated into a CI/CD pipeline and
-checking that certain dependency rules are met at all times.
+checking that certain dependency rules are met at all times. There is
+pre-configured Github action [flcheck][gh-action] in the marketplace that let's
+you integrate flcheck with only a couple of lines in your github worflows.
 
 
 ## Running
@@ -40,6 +42,12 @@ checking that certain dependency rules are met at all times.
 ### Print example configuration
 
     $ flcheck example
+
+
+## Installation
+
+Go to the [releases page][releases], expand the list of assets and download a
+ready-to-run binary.
 
 
 ## Building
@@ -122,3 +130,5 @@ blacklist:
 
 
 [actions]: https://github.com/kongo2002/flcheck/actions/
+[releases]: https://github.com/kongo2002/flcheck/releases/
+[gh-action]: https://github.com/marketplace/actions/flcheck/
