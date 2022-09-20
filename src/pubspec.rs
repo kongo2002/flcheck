@@ -208,7 +208,7 @@ impl Pubspec {
         // git dependencies are allowed/ignore for now
         // TODO: we might need a concept to identify "internal" git dependencies
         if dep.is_git() {
-            return None
+            return None;
         }
 
         let valid_prefixes: Vec<_> = config
@@ -378,4 +378,35 @@ fn pubspec_dir(path: &str) -> Option<(String, String)> {
     let full_dir = full_path.parent().and_then(|f| f.to_str())?;
 
     Some((dir_name.to_owned(), full_dir.to_owned()))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::pubspec::PackageType;
+    use crate::Config;
+    use crate::Pubspec;
+
+    #[test]
+    fn empty_dependencies() {
+        let config = Config {
+            package_types: vec![PackageType {
+                name: "app".to_owned(),
+                prefixes: vec!["app".to_owned()],
+                includes: Vec::new(),
+            }],
+            blacklist: Vec::new(),
+        };
+
+        let all = vec![Pubspec {
+            name: "test".to_owned(),
+            path: "/tmp/test".to_owned(),
+            dir_name: "test".to_owned(),
+            dir_path: "/tmp/test".to_owned(),
+            dependencies: Vec::new(),
+        }];
+
+        let errors = all[0].validate(&config, &all);
+
+        assert_eq!(errors.len(), 0);
+    }
 }

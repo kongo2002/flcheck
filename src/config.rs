@@ -8,7 +8,7 @@ use yaml_rust::Yaml;
 #[derive(Debug)]
 pub struct Config {
     pub package_types: Vec<PackageType>,
-    blacklist: Vec<Regex>,
+    pub blacklist: Vec<Regex>,
 }
 
 #[derive(Debug, PartialEq)]
