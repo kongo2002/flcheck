@@ -18,6 +18,7 @@ pub struct Pubspec {
     pub dir_path: String,
     pub dependencies: Vec<Dependency>,
     pub dev_dependencies: Vec<Dependency>,
+    pub is_public: bool,
 }
 
 #[derive(Debug)]
@@ -112,6 +113,7 @@ impl Pubspec {
                 dir_path: dir_path,
                 dependencies: get_dependencies(&yaml),
                 dev_dependencies: get_dev_dependencies(&yaml),
+                is_public: is_public_package(&yaml),
             })
     }
 
@@ -318,6 +320,11 @@ pub fn find_pubspecs(root_dir: &str) -> Vec<String> {
     pubspecs
 }
 
+fn is_public_package(yaml: &Yaml) -> bool {
+    let is_public_node = &yaml["flcheck"]["is_public"].as_bool();
+    is_public_node.unwrap_or(false)
+}
+
 fn get_dependencies(yaml: &Yaml) -> Vec<Dependency> {
     let dependencies = &yaml["dependencies"];
     let dependency_overrides = &yaml["dependency_overrides"];
@@ -449,6 +456,7 @@ mod tests {
             dir_path: "/tmp/test".to_owned(),
             dependencies: Vec::new(),
             dev_dependencies: Vec::new(),
+            is_public: false,
         }];
 
         let errors = all[0].validate(&config, &all);
