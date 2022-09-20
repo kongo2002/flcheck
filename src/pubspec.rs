@@ -17,6 +17,7 @@ pub struct Pubspec {
     pub dir_name: String,
     pub dir_path: String,
     pub dependencies: Vec<Dependency>,
+    pub dev_dependencies: Vec<Dependency>,
 }
 
 #[derive(Debug)]
@@ -110,6 +111,7 @@ impl Pubspec {
                 dir_name: dir_name,
                 dir_path: dir_path,
                 dependencies: get_dependencies(&yaml),
+                dev_dependencies: get_dev_dependencies(&yaml),
             })
     }
 
@@ -324,6 +326,26 @@ fn get_dependencies(yaml: &Yaml) -> Vec<Dependency> {
     deps
 }
 
+fn get_dev_dependencies(yaml: &Yaml) -> Vec<Dependency> {
+    let dependencies = &yaml["dev_dependencies"];
+    let empty = Default::default();
+
+    let mut deps = vec![];
+
+    for (key, value) in dependencies.as_hash().unwrap_or(&empty).iter() {
+        let key = key.as_str().unwrap_or("");
+        if key.is_empty() {
+            continue;
+        }
+
+        if let Some(dep) = extract_dependency(key, value) {
+            deps.push(dep);
+        }
+    }
+
+    deps
+}
+
 fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
     let path = value["path"].as_str().unwrap_or("");
 
@@ -403,6 +425,7 @@ mod tests {
             dir_name: "test".to_owned(),
             dir_path: "/tmp/test".to_owned(),
             dependencies: Vec::new(),
+            dev_dependencies: Vec::new(),
         }];
 
         let errors = all[0].validate(&config, &all);
