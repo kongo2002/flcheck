@@ -1,7 +1,8 @@
 use crate::cli::OutputFormat;
-use crate::error::PackageValidation;
-use crate::pubdev::fetch_dep_versions;
 use crate::dependency::Dependency;
+use crate::error::PackageValidation;
+use crate::error::ValidationLevel;
+use crate::pubdev::fetch_dep_versions;
 use crate::Config;
 use crate::FlError;
 use crate::FlError::ValidationError;
@@ -122,8 +123,16 @@ pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<()
                 }
 
                 for val in validation_errors {
-                    num_errors += 1;
-                    println!("{}: {} [{}]", val.package_name, val.error, val.code)
+                    if val.level == ValidationLevel::Error {
+                        num_errors += 1;
+                    }
+
+                    if val.level != ValidationLevel::None {
+                        println!(
+                            "{}: {}: {} [{}]",
+                            val.level, val.package_name, val.error, val.code
+                        )
+                    }
                 }
             }
             num_errors
@@ -134,7 +143,11 @@ pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<()
                 .flat_map(|pubspec| pubspec.validate(&config, &pubspecs))
                 .collect::<Vec<_>>();
 
-            let num_errors = validations.len() as u32;
+            let num_errors = validations
+                .iter()
+                .filter(|err| err.level == ValidationLevel::Error)
+                .count() as u32;
+
             let json_output = JsonValidationResult { validations };
 
             serde_json::to_string(&json_output)
@@ -206,6 +219,17 @@ package_types:
 # packages.
 blacklist:
   - '/example'
+
+# You can configure what kind of validations are associated with what
+# level of severity: `error` for errors, `warn` for warnings or
+# `none` to be ignored.
+# If not specified, every validation defaults to `error`
+validations:
+  validation:dev-dependency:git: error
+  validation:dependency:unknown: error
+  validation:dependency:unallowed: error
+  validation:dependency:cyclic: error
+  validation:public:dependency:non-git: error
 "#
     );
 }

@@ -129,6 +129,17 @@ package_types:
 # packages.
 blacklist:
   - '/example'
+
+# You can configure what kind of validations are associated with what
+# level of severity: `error` for errors, `warn` for warnings or
+# `none` to be ignored.
+# If not specified, every validation defaults to `error`
+validations:
+  validation:dev-dependency:git: error
+  validation:dependency:unknown: error
+  validation:dependency:unallowed: error
+  validation:dependency:cyclic: error
+  validation:public:dependency:non-git: error
 ```
 
 

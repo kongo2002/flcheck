@@ -54,15 +54,15 @@ impl Pubspec {
         let dependency_validations = self.dependencies.iter().flat_map(|dep| {
             vec![
                 self.allowed_dependency(dep, config, packages),
-                self.cyclic_dependency(dep, packages, vec![self.dir_path.clone()]),
-                self.public_package_git_dependencies_only(dep),
+                self.cyclic_dependency(config, dep, packages, vec![self.dir_path.clone()]),
+                self.public_package_git_dependencies_only(config, dep),
             ]
             .into_iter()
             .flatten()
         });
 
         let dev_dependency_validations = self.dev_dependencies.iter().flat_map(|dep| {
-            vec![self.git_packages_in_dev_dependencies(dep)]
+            vec![self.git_packages_in_dev_dependencies(config, dep)]
                 .into_iter()
                 .flatten()
         });
@@ -94,6 +94,7 @@ impl Pubspec {
 
     fn cyclic_dependency(
         &self,
+        config: &Config,
         dep: &Dependency,
         packages: &Vec<Pubspec>,
         seen: Vec<String>,
@@ -111,9 +112,11 @@ impl Pubspec {
                         .drain(idx..)
                         .flat_map(|path| file_name(&path))
                         .collect();
+
                     prepared.push(rev_dep.dir_name.clone());
 
                     return Some(self.validation(
+                        config,
                         format!("cyclic dependency {}", prepared.join(" -> ")),
                         ValidationType::CyclicDependency,
                     ));
@@ -122,7 +125,7 @@ impl Pubspec {
                         let mut dep_path = seen.clone();
                         dep_path.push(rev_dep.dir_path.clone());
 
-                        let cyclic = self.cyclic_dependency(inner_dep, packages, dep_path);
+                        let cyclic = self.cyclic_dependency(config, inner_dep, packages, dep_path);
                         if cyclic.is_some() {
                             return cyclic;
                         }
@@ -134,9 +137,14 @@ impl Pubspec {
         }
     }
 
-    fn git_packages_in_dev_dependencies(&self, dep: &Dependency) -> Option<PackageValidation> {
+    fn git_packages_in_dev_dependencies(
+        &self,
+        config: &Config,
+        dep: &Dependency,
+    ) -> Option<PackageValidation> {
         if dep.is_git() {
             Some(self.validation(
+                config,
                 format!("git dependency in dev_dependencies {}", dep.name()),
                 ValidationType::GitDevDependency,
             ))
@@ -145,11 +153,16 @@ impl Pubspec {
         }
     }
 
-    fn public_package_git_dependencies_only(&self, dep: &Dependency) -> Option<PackageValidation> {
+    fn public_package_git_dependencies_only(
+        &self,
+        config: &Config,
+        dep: &Dependency,
+    ) -> Option<PackageValidation> {
         if !self.is_public || !dep.is_local() {
             None
         } else {
             Some(self.validation(
+                config,
                 format!("non-git dependency {} in public package", dep.name()),
                 ValidationType::NonGitDependencyInPublicPackage,
             ))
@@ -182,6 +195,7 @@ impl Pubspec {
 
         match self.resolve_dependency(dep, packages) {
             None => Some(self.validation(
+                config,
                 format!("unable to find dependency {}", dep.name()),
                 ValidationType::UnknownDependency,
             )),
@@ -191,6 +205,7 @@ impl Pubspec {
                     .any(|prefix| dep_pubspec.dir_name.starts_with(prefix));
                 if non_valid {
                     Some(self.validation(
+                        config,
                         format!("dependency to {} is not allowed", dep.name()),
                         ValidationType::DependencyNotAllowed,
                     ))
@@ -202,11 +217,19 @@ impl Pubspec {
     }
 
     /// Create a new `PackageValidation` instance for this `Pubspec`
-    fn validation(&self, error: String, code: ValidationType) -> PackageValidation {
+    fn validation(
+        &self,
+        config: &Config,
+        error: String,
+        code: ValidationType,
+    ) -> PackageValidation {
+        let level = config.validation_level(&code);
+
         PackageValidation {
             package_name: self.name.clone(),
             error: error,
             code: code,
+            level: level,
         }
     }
 }
@@ -389,6 +412,7 @@ mod tests {
                 includes: Vec::new(),
             }],
             blacklist: Vec::new(),
+            validations: Vec::new(),
         };
 
         let all = vec![Pubspec {

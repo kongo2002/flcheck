@@ -1,5 +1,7 @@
 use crate::error::FlError;
 use crate::error::FlError::ConfigValidation;
+use crate::error::ValidationLevel;
+use crate::error::ValidationType;
 use crate::util::load_yaml;
 use crate::util::yaml_str_list;
 use regex::Regex;
@@ -9,6 +11,7 @@ use yaml_rust::Yaml;
 pub struct Config {
     pub package_types: Vec<PackageType>,
     pub blacklist: Vec<Regex>,
+    pub validations: Vec<(ValidationType, ValidationLevel)>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,6 +54,18 @@ impl Config {
         self.blacklist.iter().any(|entry| entry.is_match(full_path))
     }
 
+    /// Determine the configured `ValidationLevel` for the given
+    /// `ValidationType`.
+    ///
+    /// Defaults to `ValidationLevel::Error` if not configured.
+    pub fn validation_level(&self, validation_type: &ValidationType) -> ValidationLevel {
+        self.validations
+            .iter()
+            .find(|(typ, _)| typ == validation_type)
+            .map(|(_, level)| level.clone())
+            .unwrap_or(ValidationLevel::Error)
+    }
+
     pub fn load(file: &str) -> Result<Config, FlError> {
         let config_yaml = load_yaml(file)?;
         return Config::load_from_yaml(config_yaml);
@@ -85,20 +100,38 @@ impl Config {
                 }
             });
 
-        let blacklist: Result<Vec<Regex>, _> = yaml_str_list(&config_yaml["blacklist"])
+        let validations = config_yaml["validations"]
+            .as_hash()
+            .unwrap_or(&empty)
+            .into_iter()
+            .map(|(key, value)| {
+                let type_str = key.as_str().unwrap_or("");
+                let level_str = value.as_str().unwrap_or("");
+                let validation_type = ValidationType::from_str(type_str)
+                    .ok_or(FlError::InvalidValidationType(type_str.to_owned()))?;
+                let validation_level = ValidationLevel::from_str(level_str).ok_or(
+                    FlError::InvalidValidationLevel(level_str.to_owned(), type_str.to_owned()),
+                )?;
+
+                Ok((validation_type, validation_level))
+            })
+            .collect::<Result<Vec<(ValidationType, ValidationLevel)>, FlError>>()?;
+
+        let blacklist = yaml_str_list(&config_yaml["blacklist"])
             .iter()
             .map(|entry| {
                 Regex::new(entry)
                     .map_err(|_| ConfigValidation(format!("invalid blacklist entry: '{}'", entry)))
             })
-            .collect();
+            .collect::<Result<Vec<Regex>, FlError>>()?;
 
-        blacklist
-            .map(|bl| Config {
-                package_types: package_types.collect(),
-                blacklist: bl,
-            })
-            .and_then(|c| c.validate())
+        let config = Config {
+            package_types: package_types.collect(),
+            blacklist: blacklist,
+            validations: validations,
+        };
+
+        config.validate()
     }
 
     fn package_exists(&self, package_name: &str) -> bool {
@@ -198,7 +231,8 @@ package_types:
                     prefixes: vec!["app".to_owned()],
                     includes: Vec::new()
                 }],
-                blacklist: Vec::new()
+                blacklist: Vec::new(),
+                validations: Vec::new(),
             }
         )
     }
@@ -226,7 +260,8 @@ blacklist:
                     prefixes: vec!["app".to_owned()],
                     includes: Vec::new()
                 }],
-                blacklist: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()]
+                blacklist: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()],
+                validations: Vec::new(),
             }
         )
     }
@@ -253,7 +288,8 @@ package_types:
                     prefixes: vec!["app-".to_owned(), "app_".to_owned()],
                     includes: Vec::new()
                 }],
-                blacklist: Vec::new()
+                blacklist: Vec::new(),
+                validations: Vec::new(),
             }
         )
     }
@@ -289,7 +325,9 @@ package_types:
                         includes: vec!["app".to_owned()]
                     }
                 ],
-                blacklist: Vec::new()
+                blacklist: Vec::new(),
+
+                validations: Vec::new(),
             }
         )
     }
