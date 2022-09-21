@@ -193,7 +193,10 @@ package_types:
       - package
 
   package:
-    dir_prefix: 'pkg_'
+    # you can also specify a list of directory prefixes
+    dir_prefix:
+      - 'pkg_'
+      - 'util_'
     includes:
       - package
 
