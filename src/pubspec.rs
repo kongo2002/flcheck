@@ -1,12 +1,13 @@
 extern crate walkdir;
 
-use crate::Config;
-use crate::FlError::ConfigValidation;
 use crate::config::PackageType;
 use crate::dependency::Dependency;
 use crate::error::FlError;
 use crate::error::PackageValidation;
+use crate::error::ValidationType;
 use crate::util::load_yaml;
+use crate::Config;
+use crate::FlError::ConfigValidation;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -113,7 +114,7 @@ impl Pubspec {
 
                     return Some(self.validation(
                         format!("cyclic dependency {}", prepared.join(" -> ")),
-                        "validation:dependency:cyclic",
+                        ValidationType::CyclicDependency,
                     ));
                 } else {
                     for inner_dep in rev_dep.dependencies.iter() {
@@ -136,18 +137,18 @@ impl Pubspec {
         if dep.is_git() {
             Some(self.validation(
                 format!("git dependency in dev_dependencies {}", dep.name()),
-                "validation:dev-dependency:git",
+                ValidationType::GitDevDependency,
             ))
         } else {
             None
         }
     }
 
-    fn validation(&self, error: String, code: &str) -> PackageValidation {
+    fn validation(&self, error: String, code: ValidationType) -> PackageValidation {
         PackageValidation {
             package_name: self.name.clone(),
             error: error,
-            code: code.to_owned(),
+            code: code,
         }
     }
 
@@ -178,7 +179,7 @@ impl Pubspec {
         match self.resolve_dependency(dep, packages) {
             None => Some(self.validation(
                 format!("unable to find dependency {}", dep.name()),
-                "validation:dependency:unknown",
+                ValidationType::UnknownDependency,
             )),
             Some(dep_pubspec) => {
                 let non_valid = !valid_prefixes
@@ -187,7 +188,7 @@ impl Pubspec {
                 if non_valid {
                     Some(self.validation(
                         format!("dependency to {} is not allowed", dep.name()),
-                        "validation:dependency:unallowed",
+                        ValidationType::DependencyNotAllowed,
                     ))
                 } else {
                     None
