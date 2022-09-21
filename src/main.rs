@@ -7,6 +7,7 @@ use crate::FlError::NoInputFiles;
 mod cli;
 mod command;
 mod config;
+mod dependency;
 mod error;
 mod pubdev;
 mod pubspec;

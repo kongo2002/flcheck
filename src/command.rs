@@ -1,7 +1,7 @@
 use crate::cli::OutputFormat;
 use crate::error::PackageValidation;
 use crate::pubdev::fetch_dep_versions;
-use crate::pubspec::Dependency;
+use crate::dependency::Dependency;
 use crate::Config;
 use crate::FlError;
 use crate::FlError::ValidationError;
