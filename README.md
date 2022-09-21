@@ -15,9 +15,9 @@ one larger intertwined mess of dependencies that are hard to maintain in the
 long run.
 
 The main purpose of *flcheck* is best to be integrated into a CI/CD pipeline and
-checking that certain dependency rules are met at all times. There is
-pre-configured Github action [flcheck][gh-action] in the marketplace that let's
-you integrate flcheck with only a couple of lines in your github worflows.
+checking that certain dependency rules are met at all times. There is a
+pre-configured Github action [flcheck][gh-action] in the marketplace that lets
+you integrate flcheck with only a couple of lines in your github workflows.
 
 
 ## Running
