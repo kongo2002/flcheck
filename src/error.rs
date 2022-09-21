@@ -26,6 +26,7 @@ pub enum ValidationType {
     UnknownDependency,
     DependencyNotAllowed,
     CyclicDependency,
+    NonGitDependencyInPublicPackage,
 }
 
 impl ValidationType {
@@ -35,6 +36,7 @@ impl ValidationType {
             ValidationType::UnknownDependency => "validation:dependency:unknown",
             ValidationType::DependencyNotAllowed => "validation:dependency:unallowed",
             ValidationType::CyclicDependency => "validation:dependency:cyclic",
+            ValidationType::NonGitDependencyInPublicPackage => "validation:public:dependency:non-git"
         }
     }
 }

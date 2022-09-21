@@ -55,6 +55,7 @@ impl Pubspec {
             vec![
                 self.allowed_dependency(dep, config, packages),
                 self.cyclic_dependency(dep, packages, vec![self.dir_path.clone()]),
+                self.public_package_git_dependencies_only(dep),
             ]
             .into_iter()
             .flatten()
@@ -144,11 +145,14 @@ impl Pubspec {
         }
     }
 
-    fn validation(&self, error: String, code: ValidationType) -> PackageValidation {
-        PackageValidation {
-            package_name: self.name.clone(),
-            error: error,
-            code: code,
+    fn public_package_git_dependencies_only(&self, dep: &Dependency) -> Option<PackageValidation> {
+        if !self.is_public || !dep.is_local() {
+            None
+        } else {
+            Some(self.validation(
+                format!("non-git dependency {} in public package", dep.name()),
+                ValidationType::NonGitDependencyInPublicPackage,
+            ))
         }
     }
 
@@ -158,7 +162,7 @@ impl Pubspec {
         config: &Config,
         packages: &Vec<Pubspec>,
     ) -> Option<PackageValidation> {
-        // public/external dependencies are allowed anyways
+        // public/external dependencies are allowed/ignored anyways
         if dep.is_public() {
             return None;
         }
@@ -194,6 +198,15 @@ impl Pubspec {
                     None
                 }
             }
+        }
+    }
+
+    /// Create a new `PackageValidation` instance for this `Pubspec`
+    fn validation(&self, error: String, code: ValidationType) -> PackageValidation {
+        PackageValidation {
+            package_name: self.name.clone(),
+            error: error,
+            code: code,
         }
     }
 }

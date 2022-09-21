@@ -29,6 +29,7 @@ impl Dependency {
         }
     }
 
+    /// Return a copy including an override dependency.
     pub fn with_override(self, override_dependency: Dependency) -> Self {
         match self {
             Dependency::Local { name, path, .. } => Dependency::Local {
@@ -52,6 +53,8 @@ impl Dependency {
         }
     }
 
+    /// Return the "effective" dependency meaning either itself or the
+    /// overridden dependency (if existing).
     pub fn effective(&self) -> &Dependency {
         match self {
             Dependency::Local { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
@@ -60,6 +63,16 @@ impl Dependency {
         }
     }
 
+    /// Whether this dependency is a "local" dependency, meaning
+    /// it references a package in the current/same repository.
+    pub fn is_local(&self) -> bool {
+        match self {
+            Dependency::Local { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this dependency is a reference to a git repository.
     pub fn is_git(&self) -> bool {
         match self {
             Dependency::Git { .. } => true,
@@ -67,6 +80,7 @@ impl Dependency {
         }
     }
 
+    /// Whether the dependency is a package hosted on pub.dev
     pub fn is_public(&self) -> bool {
         match self {
             Dependency::Public { .. } => true,
