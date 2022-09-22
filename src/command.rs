@@ -15,7 +15,8 @@ use std::collections::HashSet;
 
 #[derive(Serialize)]
 struct JsonValidationResult {
-    pub validations: Vec<PackageValidation>,
+    pub errors: Vec<PackageValidation>,
+    pub warnings: Vec<PackageValidation>,
 }
 
 #[derive(Serialize)]
@@ -116,23 +117,29 @@ pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<()
         OutputFormat::Plain => {
             let mut num_errors = 0u32;
             for pubspec in pubspecs.iter() {
-                let validation_errors = pubspec.validate(&config, &pubspecs);
-
                 if opts.verbose {
                     println!("Validating pubspec '{}' ({})", pubspec.name, pubspec.path);
                 }
 
-                for val in validation_errors {
-                    if val.level == ValidationLevel::Error {
-                        num_errors += 1;
-                    }
+                let validation_errors = pubspec.validate(&config, &pubspecs);
+                let grouped = group_validations(validation_errors);
 
-                    if val.level != ValidationLevel::None {
-                        println!(
-                            "{}: {}: {} [{}]",
-                            val.level, val.package_name, val.error, val.code
-                        )
-                    }
+                for error in grouped.errors {
+                    num_errors += 1;
+
+                    println!(
+                        "{}: {}: {} [{}]",
+                        error.level, error.package_name, error.error, error.code
+                    )
+                }
+
+                for warning in grouped.warnings {
+                    num_errors += 1;
+
+                    println!(
+                        "{}: {}: {} [{}]",
+                        warning.level, warning.package_name, warning.error, warning.code
+                    )
                 }
             }
             num_errors
@@ -143,19 +150,14 @@ pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<()
                 .flat_map(|pubspec| pubspec.validate(&config, &pubspecs))
                 .collect::<Vec<_>>();
 
-            let num_errors = validations
-                .iter()
-                .filter(|err| err.level == ValidationLevel::Error)
-                .count() as u32;
+            let grouped = group_validations(validations);
 
-            let json_output = JsonValidationResult { validations };
-
-            serde_json::to_string(&json_output)
+            serde_json::to_string(&grouped)
                 .ok()
                 .iter()
                 .for_each(|json| println!("{}", json));
 
-            num_errors
+            grouped.errors.len() as u32
         }
     };
 
@@ -163,6 +165,24 @@ pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<()
         Err(ValidationError(num_errors))
     } else {
         Ok(())
+    }
+}
+
+fn group_validations(validations: Vec<PackageValidation>) -> JsonValidationResult {
+    let mut warnings = Vec::new();
+    let mut errors = Vec::new();
+
+    for validation in validations {
+        match validation.level {
+            ValidationLevel::Error => errors.push(validation),
+            ValidationLevel::Warning => warnings.push(validation),
+            ValidationLevel::None => {}
+        }
+    }
+
+    JsonValidationResult {
+        warnings: warnings,
+        errors: errors,
     }
 }
 
