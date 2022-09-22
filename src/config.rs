@@ -24,6 +24,7 @@ pub struct PackageType {
 impl PartialEq for Config {
     fn eq(&self, other: &Self) -> bool {
         self.package_types == other.package_types
+            && self.validations == other.validations
             && self
                 .blacklist
                 .iter()
@@ -326,7 +327,6 @@ package_types:
                     }
                 ],
                 blacklist: Vec::new(),
-
                 validations: Vec::new(),
             }
         )

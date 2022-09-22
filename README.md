@@ -68,6 +68,8 @@ directory) that lists the dependency rules of all packages involved.
   to depend on each other
 - `blacklist`: list of patterns (regular expressions) that match package
   directories that should be excluded from all validations and checks
+- `validations`: configure a severity for each validation type that is
+  supported (`error`, `warn` or `none`, defaults to `error`)
 
 
 ### Recommended package setup
