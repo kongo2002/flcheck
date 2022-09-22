@@ -112,34 +112,33 @@ pub fn dump(opts: Opts, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     Ok(())
 }
 
+fn print_validation_plain(validation: &PackageValidation) {
+    println!(
+        "{}: {}: {} [{}]",
+        validation.level, validation.package_name, validation.error, validation.code
+    );
+
+    validation.description.iter().for_each(|desc| {
+        println!("\t{}", desc);
+    })
+}
+
 pub fn validate(opts: Opts, config: Config, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     let num_errors = match opts.output {
         OutputFormat::Plain => {
             let mut num_errors = 0u32;
             for pubspec in pubspecs.iter() {
-                if opts.verbose {
-                    println!("Validating pubspec '{}' ({})", pubspec.name, pubspec.path);
-                }
-
                 let validation_errors = pubspec.validate(&config, &pubspecs);
                 let grouped = group_validations(validation_errors);
 
                 for error in grouped.errors {
                     num_errors += 1;
 
-                    println!(
-                        "{}: {}: {} [{}]",
-                        error.level, error.package_name, error.error, error.code
-                    )
+                    print_validation_plain(&error)
                 }
 
                 for warning in grouped.warnings {
-                    num_errors += 1;
-
-                    println!(
-                        "{}: {}: {} [{}]",
-                        warning.level, warning.package_name, warning.error, warning.code
-                    )
+                    print_validation_plain(&warning)
                 }
             }
             num_errors

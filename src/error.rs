@@ -137,6 +137,7 @@ impl Serialize for ValidationType {
 pub struct PackageValidation {
     pub package_name: String,
     pub error: String,
+    pub description: Option<String>,
     pub code: ValidationType,
     pub level: ValidationLevel,
 }

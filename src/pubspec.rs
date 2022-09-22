@@ -116,6 +116,7 @@ impl Pubspec {
                         config,
                         format!("cyclic dependency {}", prepared.join(" -> ")),
                         ValidationType::CyclicDependency,
+                        None,
                     ));
                 } else {
                     for inner_dep in rev_dep.dependencies.iter() {
@@ -144,6 +145,7 @@ impl Pubspec {
                 config,
                 format!("git dependency in dev_dependencies {}", dep.name()),
                 ValidationType::GitDevDependency,
+                None,
             ))
         } else {
             None
@@ -162,6 +164,7 @@ impl Pubspec {
                 config,
                 format!("non-git dependency '{}' in public package", dep.name()),
                 ValidationType::NonGitDependencyInPublicPackage,
+                None,
             ))
         }
     }
@@ -195,16 +198,29 @@ impl Pubspec {
                 config,
                 format!("unable to find dependency '{}'", dep.name()),
                 ValidationType::UnknownDependency,
+                None,
             )),
             Some(dep_pubspec) => {
                 let non_valid = !valid_prefixes
                     .iter()
                     .any(|prefix| dep_pubspec.dir_name.starts_with(prefix));
                 if non_valid {
+                    let mut valid_packages = valid_prefixes
+                        .iter()
+                        .map(|prefix| format!("'{}'", prefix))
+                        .collect::<Vec<_>>();
+
+                    valid_packages.sort_unstable();
+                    valid_packages.dedup();
+
                     Some(self.validation(
                         config,
                         format!("dependency to '{}' is not allowed", dep.name()),
                         ValidationType::DependencyNotAllowed,
+                        format!(
+                            "packages with the following directory prefixes are allowed only: {}",
+                            valid_packages.join(", ")
+                        ),
                     ))
                 } else {
                     None
@@ -214,11 +230,12 @@ impl Pubspec {
     }
 
     /// Create a new `PackageValidation` instance for this `Pubspec`
-    fn validation(
+    fn validation<T: Into<Option<String>>>(
         &self,
         config: &Config,
         error: String,
         code: ValidationType,
+        description: T,
     ) -> PackageValidation {
         let level = config.validation_level(&code);
 
@@ -227,6 +244,7 @@ impl Pubspec {
             error: error,
             code: code,
             level: level,
+            description: description.into(),
         }
     }
 }
