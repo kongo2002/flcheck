@@ -113,7 +113,7 @@ impl Pubspec {
                         .flat_map(|path| file_name(&path))
                         .collect();
 
-                    prepared.push(rev_dep.dir_name.clone());
+                    prepared.push(format!("'{}'", rev_dep.dir_name));
 
                     return Some(self.validation(
                         config,
@@ -163,7 +163,7 @@ impl Pubspec {
         } else {
             Some(self.validation(
                 config,
-                format!("non-git dependency {} in public package", dep.name()),
+                format!("non-git dependency '{}' in public package", dep.name()),
                 ValidationType::NonGitDependencyInPublicPackage,
             ))
         }
@@ -196,7 +196,7 @@ impl Pubspec {
         match self.resolve_dependency(dep, packages) {
             None => Some(self.validation(
                 config,
-                format!("unable to find dependency {}", dep.name()),
+                format!("unable to find dependency '{}'", dep.name()),
                 ValidationType::UnknownDependency,
             )),
             Some(dep_pubspec) => {
@@ -206,7 +206,7 @@ impl Pubspec {
                 if non_valid {
                     Some(self.validation(
                         config,
-                        format!("dependency to {} is not allowed", dep.name()),
+                        format!("dependency to '{}' is not allowed", dep.name()),
                         ValidationType::DependencyNotAllowed,
                     ))
                 } else {
