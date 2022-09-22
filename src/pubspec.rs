@@ -413,6 +413,7 @@ mod tests {
             }],
             blacklist: Vec::new(),
             validations: Vec::new(),
+            public_repositories: Vec::new(),
         };
 
         let all = vec![Pubspec {

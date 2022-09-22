@@ -7,13 +7,6 @@ use crate::util::yaml_str_list;
 use regex::Regex;
 use yaml_rust::Yaml;
 
-#[derive(Debug)]
-pub struct Config {
-    pub package_types: Vec<PackageType>,
-    pub blacklist: Vec<Regex>,
-    pub validations: Vec<(ValidationType, ValidationLevel)>,
-}
-
 #[derive(Debug, PartialEq)]
 pub struct PackageType {
     pub name: String,
@@ -21,28 +14,29 @@ pub struct PackageType {
     pub includes: Vec<String>,
 }
 
-impl PartialEq for Config {
-    fn eq(&self, other: &Self) -> bool {
-        self.package_types == other.package_types
-            && self.validations == other.validations
-            && self
-                .blacklist
-                .iter()
-                .map(|rgx| rgx.as_str())
-                .collect::<Vec<_>>()
-                == other
-                    .blacklist
-                    .iter()
-                    .map(|rgx| rgx.as_str())
-                    .collect::<Vec<_>>()
-    }
-}
-
 impl PackageType {
     pub fn matches_prefix(&self, dir_name: &str) -> bool {
         self.prefixes
             .iter()
             .any(|prefix| dir_name.starts_with(prefix))
+    }
+}
+
+#[derive(Debug)]
+pub struct Config {
+    pub package_types: Vec<PackageType>,
+    pub blacklist: Vec<Regex>,
+    pub validations: Vec<(ValidationType, ValidationLevel)>,
+    pub public_repositories: Vec<Regex>,
+}
+
+impl PartialEq for Config {
+    fn eq(&self, other: &Self) -> bool {
+        self.package_types == other.package_types
+            && self.validations == other.validations
+            && regex_str_list(&self.blacklist) == regex_str_list(&other.blacklist)
+            && regex_str_list(&self.public_repositories)
+                == regex_str_list(&other.public_repositories)
     }
 }
 
@@ -118,18 +112,18 @@ impl Config {
             })
             .collect::<Result<Vec<(ValidationType, ValidationLevel)>, FlError>>()?;
 
-        let blacklist = yaml_str_list(&config_yaml["blacklist"])
-            .iter()
-            .map(|entry| {
-                Regex::new(entry)
-                    .map_err(|_| ConfigValidation(format!("invalid blacklist entry: '{}'", entry)))
-            })
-            .collect::<Result<Vec<Regex>, FlError>>()?;
+        let public_repositories = regex_list(
+            yaml_str_list(&config_yaml["public_repositories"]),
+            "public repository",
+        )?;
+
+        let blacklist = regex_list(yaml_str_list(&config_yaml["blacklist"]), "blacklist")?;
 
         let config = Config {
             package_types: package_types.collect(),
             blacklist: blacklist,
             validations: validations,
+            public_repositories: public_repositories,
         };
 
         config.validate()
@@ -173,6 +167,24 @@ impl Config {
             .map(Err)
             .unwrap_or(Ok(self))
     }
+}
+
+fn regex_str_list(regexes: &Vec<Regex>) -> Vec<&str> {
+    regexes.iter().map(|rgx| rgx.as_str()).collect::<Vec<_>>()
+}
+
+fn regex_list(strings: Vec<String>, config_type: &str) -> Result<Vec<Regex>, FlError> {
+    strings
+        .iter()
+        .map(|entry| {
+            Regex::new(entry).map_err(|_| {
+                ConfigValidation(format!(
+                    "invalid regex in {} entry: '{}'",
+                    config_type, entry
+                ))
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -234,6 +246,7 @@ package_types:
                 }],
                 blacklist: Vec::new(),
                 validations: Vec::new(),
+                public_repositories: Vec::new(),
             }
         )
     }
@@ -263,8 +276,71 @@ blacklist:
                 }],
                 blacklist: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()],
                 validations: Vec::new(),
+                public_repositories: Vec::new(),
             }
         )
+    }
+
+    #[test]
+    fn load_config_public_repositories() {
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix: app
+public_repositories:
+- one
+- two
+    ",
+        )
+        .unwrap();
+        let config = Config::load_from_yaml(docs.remove(0)).unwrap();
+
+        assert_eq!(
+            config,
+            Config {
+                package_types: vec![PackageType {
+                    name: "app".to_owned(),
+                    prefixes: vec!["app".to_owned()],
+                    includes: Vec::new()
+                }],
+                blacklist: Vec::new(),
+                validations: Vec::new(),
+                public_repositories: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()],
+            }
+        )
+    }
+
+    #[test]
+    fn load_config_invalid_yaml() {
+        let docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix: app
+public_repositories:
+- **
+    ",
+        );
+
+        assert_eq!(docs.is_err(), true)
+    }
+
+    #[test]
+    fn load_config_invalid_public_repositories() {
+        let mut docs = YamlLoader::load_from_str(
+            "
+package_types:
+  app:
+    dir_prefix: app
+public_repositories:
+- '**'
+    ",
+        )
+        .unwrap();
+        let config = Config::load_from_yaml(docs.remove(0));
+
+        assert_eq!(config.is_err(), true)
     }
 
     #[test]
@@ -291,6 +367,7 @@ package_types:
                 }],
                 blacklist: Vec::new(),
                 validations: Vec::new(),
+                public_repositories: Vec::new(),
             }
         )
     }
@@ -328,6 +405,7 @@ package_types:
                 ],
                 blacklist: Vec::new(),
                 validations: Vec::new(),
+                public_repositories: Vec::new(),
             }
         )
     }
