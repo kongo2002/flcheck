@@ -46,7 +46,13 @@ impl Config {
     }
 
     pub fn is_blacklisted(&self, full_path: &str) -> bool {
-        self.blacklist.iter().any(|entry| entry.is_match(full_path))
+        self.blacklist.iter().any(|regex| regex.is_match(full_path))
+    }
+
+    pub fn is_public_repo(&self, git_repo: &str) -> bool {
+        self.public_repositories
+            .iter()
+            .any(|regex| regex.is_match(git_repo))
     }
 
     /// Determine the configured `ValidationLevel` for the given

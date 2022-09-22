@@ -82,11 +82,8 @@ impl Pubspec {
                 let full_path = PathBuf::from(format!("{}/{}", self.dir_path, path));
                 let canonicalized = std::fs::canonicalize(full_path).ok()?;
                 let full_str = canonicalized.to_str()?;
-                let pubspec = packages
-                    .iter()
-                    .find(|pubspec| pubspec.dir_path == full_str)?;
 
-                Some(pubspec)
+                packages.iter().find(|pubspec| pubspec.dir_path == full_str)
             }
             _ => None,
         }
@@ -142,7 +139,7 @@ impl Pubspec {
         config: &Config,
         dep: &Dependency,
     ) -> Option<PackageValidation> {
-        if dep.is_git() {
+        if dep.is_public(config) {
             Some(self.validation(
                 config,
                 format!("git dependency in dev_dependencies {}", dep.name()),
@@ -176,7 +173,7 @@ impl Pubspec {
         packages: &Vec<Pubspec>,
     ) -> Option<PackageValidation> {
         // public/external dependencies are allowed/ignored anyways
-        if dep.is_public() {
+        if dep.is_pubdev() {
             return None;
         }
 
@@ -372,7 +369,7 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
         .as_str()
         .map(|str| str.to_owned())
         .or_else(|| value.as_f64().map(|num| format!("{}", num)))
-        .map(|version| Dependency::Public {
+        .map(|version| Dependency::PubDev {
             name: key.to_owned(),
             version: version,
             overridden: Box::new(None),

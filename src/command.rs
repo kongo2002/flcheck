@@ -53,7 +53,7 @@ pub async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
         .iter()
         .flat_map(|pkg| {
             pkg.dependencies.iter().flat_map(|dep| match dep {
-                Dependency::Public { name, .. } => Some(name),
+                Dependency::PubDev { name, .. } => Some(name),
                 _ => None,
             })
         })
@@ -76,7 +76,7 @@ pub async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
 
         for dep in pubspec.dependencies {
             match dep {
-                Dependency::Public { name, version, .. } => {
+                Dependency::PubDev { name, version, .. } => {
                     let pub_version = lookup.get(&name).map(|vsn| &vsn.latest);
                     println!(
                         "  {}: {} [{}]",

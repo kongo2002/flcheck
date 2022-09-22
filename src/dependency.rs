@@ -1,3 +1,4 @@
+use crate::Config;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -13,7 +14,7 @@ pub enum Dependency {
         path: String,
         overridden: Box<Option<Dependency>>,
     },
-    Public {
+    PubDev {
         name: String,
         version: String,
         overridden: Box<Option<Dependency>>,
@@ -25,7 +26,7 @@ impl Dependency {
         match self {
             Dependency::Local { name, .. } => name,
             Dependency::Git { name, .. } => name,
-            Dependency::Public { name, .. } => name,
+            Dependency::PubDev { name, .. } => name,
         }
     }
 
@@ -45,7 +46,7 @@ impl Dependency {
                 git,
                 overridden: Box::new(Some(override_dependency)),
             },
-            Dependency::Public { name, version, .. } => Dependency::Public {
+            Dependency::PubDev { name, version, .. } => Dependency::PubDev {
                 name,
                 version,
                 overridden: Box::new(Some(override_dependency)),
@@ -59,7 +60,7 @@ impl Dependency {
         match self {
             Dependency::Local { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
             Dependency::Git { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
-            Dependency::Public { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
+            Dependency::PubDev { overridden, .. } => overridden.as_ref().as_ref().unwrap_or(self),
         }
     }
 
@@ -81,10 +82,19 @@ impl Dependency {
     }
 
     /// Whether the dependency is a package hosted on pub.dev
-    pub fn is_public(&self) -> bool {
+    pub fn is_pubdev(&self) -> bool {
         match self {
-            Dependency::Public { .. } => true,
+            Dependency::PubDev { .. } => true,
             _ => false,
+        }
+    }
+
+    /// Whether this dependency refers to a git repository that
+    /// is considered a "public" one, according to given `Config`.
+    pub fn is_public(&self, config: &Config) -> bool {
+        match self {
+            Dependency::Git { git, .. } => config.is_public_repo(git),
+            _ => false
         }
     }
 }
