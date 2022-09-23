@@ -25,23 +25,31 @@ you integrate flcheck with only a couple of lines in your github workflows.
 
 ### Validate dependencies
 
-    $ flcheck validate -d /some/dir/of/apps
+```console
+$ flcheck validate -d /some/dir/of/apps
+```
 
 
 ### Print dot dependency graph
 
-    $ flcheck graph -d /some/dir/of/apps > dependencies.dot
-    $ dot -o dependencies.png -Tpng dependencies.dot
+```console
+$ flcheck graph -d /some/dir/of/apps > dependencies.dot
+$ dot -o dependencies.png -Tpng dependencies.dot
+```
 
 
 ### Check external dependency versions
 
-    $ flcheck check -d /some/dir/of/apps
+```console
+$ flcheck check -d /some/dir/of/apps
+```
 
 
 ### Print example configuration
 
-    $ flcheck example
+```console
+$ flcheck example
+```
 
 
 ## Installation
@@ -54,7 +62,7 @@ ready-to-run binary.
 
 *flcheck* is written in rust and can be built using the usual cargo toolchain:
 
-```shell
+```console
 $ cargo build --release
 ```
 
