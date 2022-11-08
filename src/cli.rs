@@ -112,6 +112,7 @@ fn parse_format(value: &str) -> Result<OutputFormat, &str> {
 fn canonicalize(path: &String) -> Option<String> {
     let canonicalized = std::fs::canonicalize(path).ok()?;
     let canonical_str = canonicalized.to_str()?;
+
     Some(canonical_str.to_owned())
 }
 

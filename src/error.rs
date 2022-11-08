@@ -133,7 +133,7 @@ impl Serialize for ValidationType {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 pub struct PackageValidation {
     pub package_name: String,
     pub error: String,

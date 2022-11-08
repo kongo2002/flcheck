@@ -6,6 +6,7 @@ use crate::error::FlError;
 use crate::error::PackageValidation;
 use crate::error::ValidationType;
 use crate::util::load_yaml;
+use crate::util::normalize_path_str;
 use crate::Config;
 use crate::FlError::ConfigValidation;
 
@@ -79,9 +80,9 @@ impl Pubspec {
     ) -> Option<&'a Pubspec> {
         match dep.effective() {
             Dependency::Local { path, .. } => {
-                let full_path = PathBuf::from(format!("{}/{}", self.dir_path, path));
-                let canonicalized = std::fs::canonicalize(full_path).ok()?;
-                let full_str = canonicalized.to_str()?;
+                let full_path = format!("{}/{}", self.dir_path, path);
+                let normalized = normalize_path_str(full_path);
+                let full_str = normalized.to_str()?;
 
                 packages.iter().find(|pubspec| pubspec.dir_path == full_str)
             }
@@ -414,35 +415,253 @@ fn pubspec_dir(path: &str) -> Option<(String, String)> {
 
 #[cfg(test)]
 mod tests {
+    use crate::dependency::Dependency;
+    use crate::error::ValidationType;
     use crate::pubspec::PackageType;
+    use crate::pubspec::PackageValidation;
     use crate::Config;
     use crate::Pubspec;
 
-    #[test]
-    fn empty_dependencies() {
-        let config = Config {
-            package_types: vec![PackageType {
-                name: "app".to_owned(),
-                prefixes: vec!["app".to_owned()],
-                includes: Vec::new(),
-            }],
+    fn empty_config() -> Config {
+        return Config {
+            package_types: Vec::new(),
             blacklist: Vec::new(),
             validations: Vec::new(),
             public_repositories: Vec::new(),
         };
+    }
 
-        let all = vec![Pubspec {
-            name: "test".to_owned(),
-            path: "/tmp/test".to_owned(),
-            dir_name: "test".to_owned(),
-            dir_path: "/tmp/test".to_owned(),
+    fn base_config() -> Config {
+        let empty = empty_config();
+        return Config {
+            package_types: vec![
+                PackageType {
+                    name: "app".to_owned(),
+                    prefixes: vec!["app_".to_owned()],
+                    includes: vec!["shared".to_owned()],
+                },
+                PackageType {
+                    name: "shared".to_owned(),
+                    prefixes: vec!["shared_".to_owned()],
+                    includes: vec!["shared".to_owned(), "package".to_owned()],
+                },
+                PackageType {
+                    name: "package".to_owned(),
+                    prefixes: vec!["pkg_".to_owned()],
+                    includes: vec!["package".to_owned()],
+                },
+            ],
+            ..empty
+        };
+    }
+
+    fn pkg(name: &str, path: &str) -> Pubspec {
+        return Pubspec {
+            name: name.to_owned(),
+            path: format!("{}/pubspec.yaml", path),
+            dir_name: name.to_owned(),
+            dir_path: path.to_owned(),
             dependencies: Vec::new(),
             dev_dependencies: Vec::new(),
             is_public: false,
+        };
+    }
+
+    fn codes(validations: Vec<PackageValidation>) -> Vec<ValidationType> {
+        return validations.into_iter().map(|v| v.code).collect();
+    }
+
+    #[test]
+    fn empty_dependencies() {
+        let config = base_config();
+        let all = vec![pkg("test", "/tmp/test")];
+
+        let errors = all[0].validate(&config, &all);
+        assert_eq!(errors.len(), 0);
+    }
+
+    #[test]
+    fn multiple_packages() {
+        let config = base_config();
+        let all = vec![
+            pkg("foo", "/tmp/foo"),
+            pkg("bar", "/tmp/bar"),
+            pkg("ham", "/tmp/ham"),
+            pkg("eggs", "/tmp/eggs"),
+        ];
+
+        for pkg in all.iter() {
+            let errors = pkg.validate(&config, &all);
+            assert_eq!(errors.len(), 0);
+        }
+    }
+
+    #[test]
+    fn git_dependency() {
+        let config = base_config();
+        let all = vec![Pubspec {
+            dependencies: vec![Dependency::Git {
+                name: "git".to_owned(),
+                git: "git://repo".to_owned(),
+                path: "".to_owned(),
+                overridden: Box::new(None),
+            }],
+            ..pkg("foo", "/tmp/foo")
         }];
 
         let errors = all[0].validate(&config, &all);
-
         assert_eq!(errors.len(), 0);
+    }
+
+    #[test]
+    fn unknown_dependency() {
+        let config = base_config();
+        let all = vec![Pubspec {
+            dependencies: vec![Dependency::Local {
+                name: "bar".to_owned(),
+                path: "../bar".to_owned(),
+                overridden: Box::new(None),
+            }],
+            ..pkg("foo", "/tmp/foo")
+        }];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![ValidationType::UnknownDependency]);
+    }
+
+    #[test]
+    fn unconfigured_dependency() {
+        let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "bar".to_owned(),
+                    path: "../bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("foo", "/tmp/foo")
+            },
+            Pubspec {
+                dependencies: vec![],
+                ..pkg("bar", "/tmp/bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![ValidationType::DependencyNotAllowed]);
+    }
+
+    #[test]
+    fn basic_dependency() {
+        let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "pkg_bar".to_owned(),
+                    path: "../pkg_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("app_foo", "/tmp/app_foo")
+            },
+            Pubspec {
+                dependencies: vec![],
+                ..pkg("pkg_bar", "/tmp/pkg_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, Vec::new());
+    }
+
+    #[test]
+    fn unallowed_dependency() {
+        let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "app_bar".to_owned(),
+                    path: "../app_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_foo", "/tmp/pkg_foo")
+            },
+            Pubspec {
+                dependencies: vec![],
+                ..pkg("app_bar", "/tmp/app_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![ValidationType::DependencyNotAllowed]);
+    }
+
+    #[test]
+    fn cyclic_dependency() {
+        let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "pkg_bar".to_owned(),
+                    path: "../pkg_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_foo", "/tmp/pkg_foo")
+            },
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "pkg_foo".to_owned(),
+                    path: "../pkg_foo".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_bar", "/tmp/pkg_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![ValidationType::CyclicDependency]);
+    }
+
+    #[test]
+    fn cyclic_and_unallowed_dependency() {
+        let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "app_bar".to_owned(),
+                    path: "../app_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("app_foo", "/tmp/app_foo")
+            },
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "app_foo".to_owned(),
+                    path: "../app_foo".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("app_bar", "/tmp/app_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(
+            error_codes,
+            vec![
+                ValidationType::DependencyNotAllowed,
+                ValidationType::CyclicDependency
+            ]
+        );
     }
 }
