@@ -1,8 +1,8 @@
-use std::path::PathBuf;
-use std::path::Path;
-use std::path::Component;
-use crate::FlError::NoConfigFound;
 use crate::error::FlError;
+use crate::FlError::NoConfigFound;
+use std::path::Component;
+use std::path::Path;
+use std::path::PathBuf;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
@@ -39,7 +39,7 @@ pub fn yaml_str_list(yaml: &Yaml) -> Vec<String> {
 /// function in the first place.
 pub fn normalize_path_str(path_str: String) -> PathBuf {
     let path = Path::new(path_str.as_str());
-    return normalize_path(path)
+    return normalize_path(path);
 }
 
 /// Helper function that normalizes (or canonicalizes) the given `path`. This function does not

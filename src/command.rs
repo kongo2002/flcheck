@@ -131,9 +131,9 @@ fn print_pubspec_plain(pubspec: Pubspec) {
 
 fn print_dependency_plain(dep: &Dependency) {
     let type_name = match dep {
-        Dependency::Git {..} => "git",
-        Dependency::Local {..} => "local",
-        Dependency::PubDev {..} => "public",
+        Dependency::Git { .. } => "git",
+        Dependency::Local { .. } => "local",
+        Dependency::PubDev { .. } => "public",
     };
     println!("    {} [{}]", dep.name(), type_name)
 }

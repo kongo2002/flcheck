@@ -94,7 +94,7 @@ impl Dependency {
     pub fn is_public(&self, config: &Config) -> bool {
         match self {
             Dependency::Git { git, .. } => config.is_public_repo(git),
-            _ => false
+            _ => false,
         }
     }
 }

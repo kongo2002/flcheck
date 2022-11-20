@@ -105,7 +105,7 @@ fn parse_format(value: &str) -> Result<OutputFormat, &str> {
     match value {
         "plain" => Ok(OutputFormat::Plain),
         "json" => Ok(OutputFormat::Json),
-        _ => Err("invalid output format (valid: json, plain)")
+        _ => Err("invalid output format (valid: json, plain)"),
     }
 }
 
