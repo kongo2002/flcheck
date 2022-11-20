@@ -104,12 +104,38 @@ pub fn dump(opts: Opts, pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
         }
         OutputFormat::Plain => {
             for pubspec in pubspecs {
-                // TODO: implement proper Display
-                println!("{:?}", pubspec)
+                print_pubspec_plain(pubspec)
             }
         }
     }
     Ok(())
+}
+
+fn print_pubspec_plain(pubspec: Pubspec) {
+    println!("{} [{}]:", pubspec.name, pubspec.path);
+
+    if !pubspec.dependencies.is_empty() {
+        println!("  dependencies:");
+        for dep in pubspec.dependencies.iter() {
+            print_dependency_plain(dep)
+        }
+    }
+
+    if !pubspec.dev_dependencies.is_empty() {
+        println!("  dev-dependencies:");
+        for dep in pubspec.dev_dependencies.iter() {
+            print_dependency_plain(dep)
+        }
+    }
+}
+
+fn print_dependency_plain(dep: &Dependency) {
+    let type_name = match dep {
+        Dependency::Git {..} => "git",
+        Dependency::Local {..} => "local",
+        Dependency::PubDev {..} => "public",
+    };
+    println!("    {} [{}]", dep.name(), type_name)
 }
 
 fn print_validation_plain(validation: &PackageValidation) {
