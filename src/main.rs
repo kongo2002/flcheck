@@ -14,6 +14,8 @@ mod pubspec;
 mod util;
 
 async fn run(opts: Opts) -> Result<(), FlError> {
+    // no need to load any pubspecs if we only want to
+    // print the example configuration
     if matches!(opts.command, OptCommand::ExampleConfig) {
         command::example_config();
         return Ok(());

@@ -40,6 +40,8 @@ Commands:
     print!("{}", opts.usage(&brief));
 }
 
+/// Extract command line options.
+/// Exits with non-zero exit code on invalid arguments.
 pub fn get_opts() -> Opts {
     let args: Vec<String> = env::args().collect();
 
@@ -57,6 +59,7 @@ pub fn get_opts() -> Opts {
         }
     };
 
+    // print help/usage
     if matches.opt_present("h") {
         usage(&opts, &args[0]);
         std::process::exit(0);
@@ -67,13 +70,19 @@ pub fn get_opts() -> Opts {
     let output_format = matches.opt_str("o").unwrap_or("plain".to_owned());
 
     let cmd = match matches.free.len() {
+        1 => OptCommand::from(&matches.free[0]),
         0 => {
             eprintln!("missing command");
             eprintln!();
             usage(&opts, &args[0]);
             std::process::exit(1)
         }
-        _ => OptCommand::from(&matches.free[0]),
+        _ => {
+            eprintln!("multiple commands are not supported");
+            eprintln!();
+            usage(&opts, &args[0]);
+            std::process::exit(1)
+        }
     };
 
     let output = match parse_format(&output_format) {

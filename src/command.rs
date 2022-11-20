@@ -130,12 +130,14 @@ fn print_pubspec_plain(pubspec: Pubspec) {
 }
 
 fn print_dependency_plain(dep: &Dependency) {
-    let type_name = match dep {
-        Dependency::Git { .. } => "git",
-        Dependency::Local { .. } => "local",
-        Dependency::PubDev { .. } => "public",
-    };
-    println!("    {} [{}]", dep.name(), type_name)
+    println!("    {} {}", dep.name(), dep.details());
+    dep.overridden().iter().for_each(|override_dependency| {
+        println!(
+            "      override: {} {}",
+            override_dependency.name(),
+            override_dependency.details()
+        );
+    })
 }
 
 fn print_validation_plain(validation: &PackageValidation) {

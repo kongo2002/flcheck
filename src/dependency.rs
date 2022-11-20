@@ -30,6 +30,25 @@ impl Dependency {
         }
     }
 
+    /// Output a short descriptive string on type and "details" of
+    /// this dependency
+    pub fn details(&self) -> String {
+        match self {
+            Dependency::Local { path, .. } => format!("[local, {}]", path),
+            Dependency::Git { git, .. } => format!("[git, {}]", git),
+            Dependency::PubDev { version, .. } => format!("[public, {}]", version),
+        }
+    }
+
+    /// Return the override dependency (if set)
+    pub fn overridden(&self) -> &Option<Dependency> {
+        match self {
+            Dependency::Local { overridden, .. } => overridden,
+            Dependency::Git { overridden, .. } => overridden,
+            Dependency::PubDev { overridden, .. } => overridden,
+        }
+    }
+
     /// Return a copy including an override dependency.
     pub fn with_override(self, override_dependency: Dependency) -> Self {
         match self {
