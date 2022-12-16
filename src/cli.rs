@@ -69,30 +69,22 @@ pub fn get_opts() -> Opts {
     let root_dir = matches.opt_str("d").unwrap_or(".".to_owned());
     let output_format = matches.opt_str("o").unwrap_or("plain".to_owned());
 
+    let fail = |err: &str| -> ! {
+        eprintln!("E: {}", err);
+        eprintln!();
+        usage(&opts, &args[0]);
+        std::process::exit(1)
+    };
+
     let cmd = match matches.free.len() {
         1 => OptCommand::from(&matches.free[0]),
-        0 => {
-            eprintln!("missing command");
-            eprintln!();
-            usage(&opts, &args[0]);
-            std::process::exit(1)
-        }
-        _ => {
-            eprintln!("multiple commands are not supported");
-            eprintln!();
-            usage(&opts, &args[0]);
-            std::process::exit(1)
-        }
+        0 => fail("missing command"),
+        _ => fail("multiple commands are not supported"),
     };
 
     let output = match parse_format(&output_format) {
         Ok(fmt) => fmt,
-        Err(error) => {
-            eprintln!("{}", error);
-            eprintln!();
-            usage(&opts, &args[0]);
-            std::process::exit(1)
-        }
+        Err(error) => fail(error),
     };
 
     if let Some(command) = cmd {
@@ -103,10 +95,7 @@ pub fn get_opts() -> Opts {
             output,
         }
     } else {
-        eprintln!("unknown command");
-        eprintln!();
-        usage(&opts, &args[0]);
-        std::process::exit(1)
+        fail("unknown command");
     }
 }
 
