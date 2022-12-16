@@ -21,4 +21,8 @@ coverage-report: flcheck.profdata
 coverage: flcheck.profdata
 	@llvm-cov show $$(for file in $$(RUSTFLAGS="-C instrument-coverage" cargo test --tests --no-run --message-format=json | jq -r "select(.profile.test == true) | .filenames[]"); do printf "%s %s" -object $$file; done) -Xdemangler=rustfilt -instr-profile=flcheck.profdata -show-line-counts-or-regions -show-instantiations "--ignore-filename-regex=.cargo|rustc"
 
-.PHONY: all test build coverage-report coverage
+clean:
+	@cargo clean
+	@rm -rf *.profraw
+
+.PHONY: all clean test build coverage-report coverage
