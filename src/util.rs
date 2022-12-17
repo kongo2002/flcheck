@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
+/// Try to read the file at path `config_file` into a `Yaml` structure.
 pub fn load_yaml(config_file: &str) -> Result<Yaml, FlError> {
     if !std::path::Path::new(config_file).exists() {
         return Err(NoConfigFound(config_file.to_owned()));
@@ -17,10 +18,13 @@ pub fn load_yaml(config_file: &str) -> Result<Yaml, FlError> {
     if docs.is_empty() {
         Err(NoConfigFound(config_file.to_owned()))
     } else {
+        // we are only interested in the first parsed "file"
         Ok(docs.remove(0))
     }
 }
 
+/// Try to extract the given `Yaml` into a list of `String`.
+/// If it is anything else, it will return an empty list.
 pub fn yaml_str_list(yaml: &Yaml) -> Vec<String> {
     let empty_list = Default::default();
 

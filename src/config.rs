@@ -67,11 +67,14 @@ impl Config {
             .unwrap_or(ValidationLevel::Error)
     }
 
+    /// Attempt to load `Config` from the given file name that
+    /// is expected to be a YAML file.
     pub fn load(file: &str) -> Result<Config, FlError> {
         let config_yaml = load_yaml(file)?;
         return Config::load_from_yaml(config_yaml);
     }
 
+    /// Try to parse the given `Yaml` into a valid `Config`
     fn load_from_yaml(config_yaml: Yaml) -> Result<Config, FlError> {
         let empty = Default::default();
 
@@ -83,6 +86,7 @@ impl Config {
                 let name = key.as_str().unwrap_or("").to_owned();
                 let includes = yaml_str_list(&value["includes"]);
 
+                // `dir_prefix` may be either a string or a list of strings
                 let prefix = value["dir_prefix"].as_str().unwrap_or("").to_owned();
                 let prefixes = if prefix.is_empty() {
                     yaml_str_list(&value["dir_prefix"])
@@ -96,7 +100,7 @@ impl Config {
                     Some(PackageType {
                         name,
                         prefixes,
-                        includes: includes,
+                        includes,
                     })
                 }
             });
@@ -127,9 +131,9 @@ impl Config {
 
         let config = Config {
             package_types: package_types.collect(),
-            blacklist: blacklist,
-            validations: validations,
-            public_repositories: public_repositories,
+            blacklist,
+            validations,
+            public_repositories,
         };
 
         config.validate()
@@ -141,6 +145,10 @@ impl Config {
             .any(|package| package.name == package_name)
     }
 
+    /// Validate the given `Config`:
+    ///   - non empty package types
+    ///   - each package must have at least one `dir_prefix`
+    ///   - each package's includes must exist
     fn validate(self) -> Result<Config, FlError> {
         if !self.is_valid() {
             return Err(ConfigValidation("no package types configured".to_owned()));
@@ -175,10 +183,14 @@ impl Config {
     }
 }
 
+/// Convert a list of `Regex` into a list of their
+/// respective string representations (used for equality tests).
 fn regex_str_list(regexes: &Vec<Regex>) -> Vec<&str> {
     regexes.iter().map(|rgx| rgx.as_str()).collect::<Vec<_>>()
 }
 
+/// Try to parse a list of strings into a list of valid
+/// regular expressions.
 fn regex_list(strings: Vec<String>, config_type: &str) -> Result<Vec<Regex>, FlError> {
     strings
         .iter()
