@@ -20,6 +20,26 @@ pre-configured Github action [flcheck][gh-action] in the marketplace that lets
 you integrate flcheck with only a couple of lines in your github workflows.
 
 
+## CI/CD integration
+
+You can easily integrate `flcheck` into your CI/CD pipeline.
+
+### Github workflow
+
+For github there is even a ready-to-use action, called
+[flcheck](https://github.com/marketplace/actions/flcheck). It can be as simple
+as something like this:
+
+```yaml
+- name: Run flcheck
+  uses: kongo2002/flcheck-action@v1
+  with:
+    command: validate
+    config: flcheck.yaml
+    appDir: ./apps
+```
+
+
 ## Running
 
 
