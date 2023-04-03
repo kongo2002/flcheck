@@ -52,10 +52,14 @@ impl Pubspec {
             return vec![];
         }
 
+        let all_dependencies = self.dependencies.iter().chain(self.dev_dependencies.iter());
+        let all_dependency_validations = all_dependencies.flat_map(|dep| {
+            self.cyclic_dependency(config, dep, packages, vec![self.dir_path.clone()])
+        });
+
         let dependency_validations = self.dependencies.iter().flat_map(|dep| {
             vec![
                 self.allowed_dependency(dep, config, packages),
-                self.cyclic_dependency(config, dep, packages, vec![self.dir_path.clone()]),
                 self.public_package_git_dependencies_only(config, dep),
             ]
             .into_iter()
@@ -69,6 +73,7 @@ impl Pubspec {
         });
 
         return dependency_validations
+            .chain(all_dependency_validations)
             .chain(dev_dependency_validations)
             .collect();
     }
@@ -120,7 +125,11 @@ impl Pubspec {
                         None,
                     ));
                 } else {
-                    for inner_dep in rev_dep.dependencies.iter() {
+                    let all_dependencies = rev_dep
+                        .dependencies
+                        .iter()
+                        .chain(rev_dep.dev_dependencies.iter());
+                    for inner_dep in all_dependencies {
                         let mut dep_path = seen.clone();
                         dep_path.push(rev_dep.dir_path.clone());
 
@@ -663,5 +672,33 @@ mod tests {
                 ValidationType::CyclicDependency
             ]
         );
+    }
+
+    #[test]
+    fn cyclic_dev_dependencies() {
+        let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "pkg_bar".to_owned(),
+                    path: "../pkg_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_foo", "/tmp/pkg_foo")
+            },
+            Pubspec {
+                dev_dependencies: vec![Dependency::Local {
+                    name: "pkg_foo".to_owned(),
+                    path: "../pkg_foo".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_bar", "/tmp/pkg_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![ValidationType::CyclicDependency]);
     }
 }
