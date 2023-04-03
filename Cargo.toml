@@ -4,7 +4,7 @@ homepage = "https://github.com/kongo2002/flcheck"
 repository = "https://github.com/kongo2002/flcheck"
 description = "CLI to check dependencies of flutter applications"
 name = "flcheck"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 
 [dependencies]
