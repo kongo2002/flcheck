@@ -1,6 +1,14 @@
 # Changelog
 
 
+## 1.2.1
+
+2025-03-09
+
+- improvement: add arm64 release for MacOS
+- internal: update dependencies
+
+
 ## 1.2.0
 
 2023-04-03
