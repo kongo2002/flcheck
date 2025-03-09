@@ -29,14 +29,17 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - { target: aarch64-unknown-linux-gnu   , os: ubuntu-24.04, use-cross: true }
-          - { target: arm-unknown-linux-gnueabihf , os: ubuntu-24.04, use-cross: true }
-          - { target: arm-unknown-linux-musleabihf, os: ubuntu-24.04, use-cross: true }
-          - { target: i686-unknown-linux-gnu      , os: ubuntu-24.04, use-cross: true }
-          - { target: i686-unknown-linux-musl     , os: ubuntu-24.04, use-cross: true }
-          - { target: x86_64-apple-darwin         , os: macos-13                      }
-          - { target: x86_64-unknown-linux-gnu    , os: ubuntu-24.04, use-cross: true }
-          - { target: x86_64-unknown-linux-musl   , os: ubuntu-24.04, use-cross: true }
+          - { id: aarch64-unknown-linux-gnu   , target: aarch64-unknown-linux-gnu   , os: ubuntu-24.04, use-cross: true }
+          - { id: arm-unknown-linux-gnueabihf , target: arm-unknown-linux-gnueabihf , os: ubuntu-24.04, use-cross: true }
+          - { id: arm-unknown-linux-musleabihf, target: arm-unknown-linux-musleabihf, os: ubuntu-24.04, use-cross: true }
+          - { id: i686-unknown-linux-gnu      , target: i686-unknown-linux-gnu      , os: ubuntu-24.04, use-cross: true }
+          - { id: i686-unknown-linux-musl     , target: i686-unknown-linux-musl     , os: ubuntu-24.04, use-cross: true }
+          # the macos-13 image is amd64 based
+          - { id: x86_64-apple-amd64          , target: x86_64-apple-darwin         , os: macos-13                      }
+          # the macos-14 image is arm64 based
+          - { id: x86_64-apple-arm64          , target: x86_64-apple-darwin         , os: macos-14                      }
+          - { id: x86_64-unknown-linux-gnu    , target: x86_64-unknown-linux-gnu    , os: ubuntu-24.04, use-cross: true }
+          - { id: x86_64-unknown-linux-musl   , target: x86_64-unknown-linux-musl   , os: ubuntu-24.04, use-cross: true }
 
     steps:
     - uses: actions/checkout@v3
@@ -96,7 +99,7 @@ jobs:
       id: package
       shell: bash
       run: |
-        PKG_BASENAME=${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
+        PKG_BASENAME=${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.id }}
         PKG_NAME=${PKG_BASENAME}.tar.gz
         PKG_STAGING="output"
         ARCHIVE_DIR="${PKG_STAGING}/package/"
