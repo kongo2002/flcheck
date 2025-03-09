@@ -109,8 +109,8 @@ jobs:
         pushd "${ARCHIVE_DIR}/" >/dev/null
         tar czf "../${PKG_NAME}" *
         popd >/dev/null
-        echo ::set-output name=PKG_NAME::${PKG_NAME}
-        echo ::set-output name=PKG_PATH::"${PKG_STAGING}/${PKG_NAME}"
+        echo "PKG_NAME=${PKG_NAME}" >> "$GITHUB_OUTPUT"
+        echo "PKG_PATH=${PKG_STAGING}/${PKG_NAME}" >> "$GITHUB_OUTPUT"
 
     - name: Artifact upload
       uses: actions/upload-artifact@master
