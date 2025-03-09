@@ -40,9 +40,11 @@ jobs:
           - { id: x86_64-apple-arm64          , target: aarch64-apple-darwin        , os: macos-14                      }
           - { id: x86_64-unknown-linux-gnu    , target: x86_64-unknown-linux-gnu    , os: ubuntu-24.04, use-cross: true }
           - { id: x86_64-unknown-linux-musl   , target: x86_64-unknown-linux-musl   , os: ubuntu-24.04, use-cross: true }
+    env:
+      BUILD_CMD: cargo
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install prerequisites
       shell: bash
@@ -79,19 +81,24 @@ jobs:
         cargo -V
         rustc -V
 
-    - name: Build release
-      uses: actions-rs/cargo@v1
+    - name: Install cross
+      if: matrix.job.use-cross
+      uses: taiki-e/install-action@v2
       with:
-        use-cross: ${{ matrix.job.use-cross }}
-        command: build
-        args: --locked --release --target=${{ matrix.job.target }}
+        tool: cross
+
+    - name: Overwrite build command env variable
+      if: matrix.job.use-cross
+      shell: bash
+      run: echo "BUILD_CMD=cross" >> "$GITHUB_ENV"
+
+    - name: Build release
+      shell: bash
+      run: $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
 
     - name: Run flcheck
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: ${{ matrix.job.use-cross }}
-        command: run
-        args: --locked --target=${{ matrix.job.target }} -- -h
+      shell: bash
+      run: $BUILD_CMD run --locked --release --target=${{ matrix.job.target }} -- -h
 
     - name: Create archive
       id: package
