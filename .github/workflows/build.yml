@@ -37,7 +37,7 @@ jobs:
           # the macos-13 image is amd64 based
           - { id: x86_64-apple-amd64          , target: x86_64-apple-darwin         , os: macos-13                      }
           # the macos-14 image is arm64 based
-          - { id: x86_64-apple-arm64          , target: x86_64-apple-darwin         , os: macos-14                      }
+          - { id: x86_64-apple-arm64          , target: aarch64-apple-darwin        , os: macos-14                      }
           - { id: x86_64-unknown-linux-gnu    , target: x86_64-unknown-linux-gnu    , os: ubuntu-24.04, use-cross: true }
           - { id: x86_64-unknown-linux-musl   , target: x86_64-unknown-linux-musl   , os: ubuntu-24.04, use-cross: true }
 
