@@ -185,6 +185,11 @@ impl Pubspec {
         config: &Config,
         packages: &Vec<Pubspec>,
     ) -> Option<PackageValidation> {
+        // dependencies are not analyzed with an empty configuration
+        if config.is_empty() {
+            return None;
+        }
+
         // public/external dependencies are allowed/ignored anyways
         if dep.is_pubdev() {
             return None;
@@ -431,37 +436,24 @@ mod tests {
     use crate::pubspec::PackageType;
     use crate::pubspec::PackageValidation;
 
-    fn empty_config() -> Config {
-        return Config {
-            package_types: Vec::new(),
-            blacklist: Vec::new(),
-            validations: Vec::new(),
-            public_repositories: Vec::new(),
-        };
-    }
-
     fn base_config() -> Config {
-        let empty = empty_config();
-        return Config {
-            package_types: vec![
-                PackageType {
-                    name: "app".to_owned(),
-                    prefixes: vec!["app_".to_owned()],
-                    includes: vec!["shared".to_owned()],
-                },
-                PackageType {
-                    name: "shared".to_owned(),
-                    prefixes: vec!["shared_".to_owned()],
-                    includes: vec!["shared".to_owned(), "package".to_owned()],
-                },
-                PackageType {
-                    name: "package".to_owned(),
-                    prefixes: vec!["pkg_".to_owned()],
-                    includes: vec!["package".to_owned()],
-                },
-            ],
-            ..empty
-        };
+        return Config::from_packages(vec![
+            PackageType {
+                name: "app".to_owned(),
+                prefixes: vec!["app_".to_owned()],
+                includes: vec!["shared".to_owned()],
+            },
+            PackageType {
+                name: "shared".to_owned(),
+                prefixes: vec!["shared_".to_owned()],
+                includes: vec!["shared".to_owned(), "package".to_owned()],
+            },
+            PackageType {
+                name: "package".to_owned(),
+                prefixes: vec!["pkg_".to_owned()],
+                includes: vec!["package".to_owned()],
+            },
+        ]);
     }
 
     fn pkg(name: &str, path: &str) -> Pubspec {

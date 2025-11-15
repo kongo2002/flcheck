@@ -30,11 +30,11 @@ fn usage(opts: &Options, exec: &str) {
         r#"Usage: {} COMMAND [OPTIONS]
 
 Commands:
-    validate - pubspec dependency validation
-    graph    - generate a dot dependency graph
-    check    - check all external dependencies' versions
-    dump     - dump package dependencies
-    example  - print example configuration"#,
+    validate   pubspec dependency validation
+    graph      generate a dot dependency graph
+    check      check all external dependencies' versions
+    dump       dump package dependencies
+    example    print example configuration"#,
         exec
     );
     print!("{}", opts.usage(&brief));
@@ -65,7 +65,7 @@ pub fn get_opts() -> Opts {
         std::process::exit(0);
     }
 
-    let config_file = matches.opt_str("c").unwrap_or("flcheck.yaml".to_owned());
+    let config_file = matches.opt_str("c").unwrap_or_default();
     let root_dir = matches.opt_str("d").unwrap_or(".".to_owned());
     let output_format = matches.opt_str("o").unwrap_or("plain".to_owned());
 

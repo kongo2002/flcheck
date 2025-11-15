@@ -1,4 +1,4 @@
-use crate::FlError::NoConfigFound;
+use crate::FlError::{EmptyFile, FileDoesNotExist};
 use crate::error::FlError;
 use std::path::Component;
 use std::path::Path;
@@ -6,17 +6,17 @@ use std::path::PathBuf;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
-/// Try to read the file at path `config_file` into a `Yaml` structure.
-pub fn load_yaml(config_file: &str) -> Result<Yaml, FlError> {
-    if !std::path::Path::new(config_file).exists() {
-        return Err(NoConfigFound(config_file.to_owned()));
+/// Try to read the file at path `file_path` into a `Yaml` structure.
+pub fn load_yaml(file_path: &str) -> Result<Yaml, FlError> {
+    if !std::path::Path::new(file_path).exists() {
+        return Err(FileDoesNotExist(file_path.to_owned()));
     }
 
-    let config_content = std::fs::read_to_string(config_file)?;
+    let config_content = std::fs::read_to_string(file_path)?;
     let mut docs = YamlLoader::load_from_str(&config_content)?;
 
     if docs.is_empty() {
-        Err(NoConfigFound(config_file.to_owned()))
+        Err(EmptyFile(file_path.to_owned()))
     } else {
         // we are only interested in the first parsed "file"
         Ok(docs.remove(0))

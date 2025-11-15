@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::error::FlError;
 use crate::error::FlError::ConfigValidation;
 use crate::error::ValidationLevel;
@@ -6,6 +8,8 @@ use crate::util::load_yaml;
 use crate::util::yaml_str_list;
 use regex::Regex;
 use yaml_rust::Yaml;
+
+const DEFAULT_CONFIG_FILE: &str = "flcheck.yaml";
 
 #[derive(Debug, PartialEq)]
 pub struct PackageType {
@@ -28,6 +32,7 @@ pub struct Config {
     pub blacklist: Vec<Regex>,
     pub validations: Vec<(ValidationType, ValidationLevel)>,
     pub public_repositories: Vec<Regex>,
+    empty: bool,
 }
 
 impl PartialEq for Config {
@@ -41,6 +46,10 @@ impl PartialEq for Config {
 }
 
 impl Config {
+    pub fn is_empty(&self) -> bool {
+        self.empty
+    }
+
     pub fn is_valid(&self) -> bool {
         !self.package_types.is_empty()
     }
@@ -67,11 +76,46 @@ impl Config {
             .unwrap_or(ValidationLevel::Error)
     }
 
+    /// Create a `Config` with the given `package_types` and the remaining
+    /// default values.
+    ///
+    /// Intended for tests.
+    #[cfg(test)]
+    pub fn from_packages(package_types: Vec<PackageType>) -> Config {
+        return Config {
+            package_types,
+            blacklist: Vec::new(),
+            validations: Vec::new(),
+            public_repositories: Vec::new(),
+            empty: false,
+        };
+    }
+
     /// Attempt to load `Config` from the given file name that
     /// is expected to be a YAML file.
     pub fn load(file: &str) -> Result<Config, FlError> {
-        let config_yaml = load_yaml(file)?;
-        return Config::load_from_yaml(config_yaml);
+        // if no config file is specified via the command line options, we try
+        // the DEFAULT_CONFIG_FILE but only if it exists. otherwise we will
+        // go with an empty default configuration
+        let file_path = if file.is_empty() {
+            if Path::new(DEFAULT_CONFIG_FILE).exists() {
+                DEFAULT_CONFIG_FILE
+            } else {
+                eprintln!("W: no configuration found - some features are not available");
+                return Ok(Config {
+                    blacklist: Vec::new(),
+                    validations: Vec::new(),
+                    public_repositories: Vec::new(),
+                    package_types: Vec::new(),
+                    empty: true,
+                });
+            }
+        } else {
+            file
+        };
+
+        let config_yaml = load_yaml(file_path)?;
+        Config::load_from_yaml(config_yaml)
     }
 
     /// Try to parse the given `Yaml` into a valid `Config`
@@ -134,6 +178,7 @@ impl Config {
             blacklist,
             validations,
             public_repositories,
+            empty: false,
         };
 
         config.validate()
@@ -265,6 +310,7 @@ package_types:
                 blacklist: Vec::new(),
                 validations: Vec::new(),
                 public_repositories: Vec::new(),
+                empty: false,
             }
         )
     }
@@ -295,6 +341,7 @@ blacklist:
                 blacklist: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()],
                 validations: Vec::new(),
                 public_repositories: Vec::new(),
+                empty: false,
             }
         )
     }
@@ -325,6 +372,7 @@ public_repositories:
                 blacklist: Vec::new(),
                 validations: Vec::new(),
                 public_repositories: vec![Regex::new("one").unwrap(), Regex::new("two").unwrap()],
+                empty: false,
             }
         )
     }
@@ -386,6 +434,7 @@ package_types:
                 blacklist: Vec::new(),
                 validations: Vec::new(),
                 public_repositories: Vec::new(),
+                empty: false,
             }
         )
     }
@@ -424,6 +473,7 @@ package_types:
                 blacklist: Vec::new(),
                 validations: Vec::new(),
                 public_repositories: Vec::new(),
+                empty: false,
             }
         )
     }
