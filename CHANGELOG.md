@@ -1,6 +1,15 @@
 # Changelog
 
 
+## 1.3.0
+
+2025-11-15
+
+- feature: support running without configuration
+- internal: update dependencies
+- internal: update MacOS builders
+
+
 ## 1.2.1
 
 2025-03-09
