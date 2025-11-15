@@ -603,8 +603,60 @@ mod tests {
     }
 
     #[test]
+    fn unallowed_dependency_empty_config() {
+        let config = Config::empty();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "app_bar".to_owned(),
+                    path: "../app_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_foo", "/tmp/pkg_foo")
+            },
+            Pubspec {
+                dependencies: vec![],
+                ..pkg("app_bar", "/tmp/app_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![]);
+    }
+
+    #[test]
     fn cyclic_dependency() {
         let config = base_config();
+        let all = vec![
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "pkg_bar".to_owned(),
+                    path: "../pkg_bar".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_foo", "/tmp/pkg_foo")
+            },
+            Pubspec {
+                dependencies: vec![Dependency::Local {
+                    name: "pkg_foo".to_owned(),
+                    path: "../pkg_foo".to_owned(),
+                    overridden: Box::new(None),
+                }],
+                ..pkg("pkg_bar", "/tmp/pkg_bar")
+            },
+        ];
+
+        let errors = all[0].validate(&config, &all);
+        let error_codes = codes(errors);
+
+        assert_eq!(error_codes, vec![ValidationType::CyclicDependency]);
+    }
+
+    #[test]
+    fn cyclic_dependency_empty_config() {
+        let config = Config::empty();
         let all = vec![
             Pubspec {
                 dependencies: vec![Dependency::Local {

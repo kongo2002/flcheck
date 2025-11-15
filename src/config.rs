@@ -91,6 +91,17 @@ impl Config {
         };
     }
 
+    /// Create an empty `Config` instance.
+    pub fn empty() -> Config {
+        Config {
+            blacklist: Vec::new(),
+            validations: Vec::new(),
+            public_repositories: Vec::new(),
+            package_types: Vec::new(),
+            empty: true,
+        }
+    }
+
     /// Attempt to load `Config` from the given file name that
     /// is expected to be a YAML file.
     pub fn load(file: &str) -> Result<Config, FlError> {
@@ -102,13 +113,7 @@ impl Config {
                 DEFAULT_CONFIG_FILE
             } else {
                 eprintln!("W: no configuration found - some features are not available");
-                return Ok(Config {
-                    blacklist: Vec::new(),
-                    validations: Vec::new(),
-                    public_repositories: Vec::new(),
-                    package_types: Vec::new(),
-                    empty: true,
-                });
+                return Ok(Config::empty());
             }
         } else {
             file
