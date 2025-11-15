@@ -1,5 +1,7 @@
 extern crate walkdir;
 
+use crate::Config;
+use crate::FlError::ConfigValidation;
 use crate::config::PackageType;
 use crate::dependency::Dependency;
 use crate::error::FlError;
@@ -7,8 +9,6 @@ use crate::error::PackageValidation;
 use crate::error::ValidationType;
 use crate::util::load_yaml;
 use crate::util::normalize_path_str;
-use crate::Config;
-use crate::FlError::ConfigValidation;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -424,12 +424,12 @@ fn pubspec_dir(path: &str) -> Option<(String, String)> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Config;
+    use crate::Pubspec;
     use crate::dependency::Dependency;
     use crate::error::ValidationType;
     use crate::pubspec::PackageType;
     use crate::pubspec::PackageValidation;
-    use crate::Config;
-    use crate::Pubspec;
 
     fn empty_config() -> Config {
         return Config {

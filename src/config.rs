@@ -207,8 +207,8 @@ fn regex_list(strings: Vec<String>, config_type: &str) -> Result<Vec<Regex>, FlE
 
 #[cfg(test)]
 mod tests {
-    use crate::config::PackageType;
     use crate::Config;
+    use crate::config::PackageType;
     use regex::Regex;
     use yaml_rust::YamlLoader;
 

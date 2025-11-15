@@ -5,7 +5,7 @@ use serde::Deserialize;
 pub struct PubVersions {
     pub name: String,
     pub latest: String,
-    pub versions: Vec<String>,
+    pub _versions: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -26,6 +26,6 @@ pub async fn fetch_dep_versions(package_name: &str) -> Result<PubVersions, FlErr
     Ok(PubVersions {
         name: package_name.to_owned(),
         latest: res.latest.version,
-        versions: res.versions.into_iter().map(|v| v.version).collect(),
+        _versions: res.versions.into_iter().map(|v| v.version).collect(),
     })
 }

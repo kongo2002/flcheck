@@ -1,8 +1,8 @@
+use crate::FlError::NoInputFiles;
 use crate::cli::{OptCommand, Opts};
 use crate::config::Config;
 use crate::error::FlError;
 use crate::pubspec::Pubspec;
-use crate::FlError::NoInputFiles;
 
 mod cli;
 mod command;

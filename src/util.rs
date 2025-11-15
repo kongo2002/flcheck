@@ -1,5 +1,5 @@
-use crate::error::FlError;
 use crate::FlError::NoConfigFound;
+use crate::error::FlError;
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
