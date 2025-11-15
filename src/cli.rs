@@ -54,7 +54,7 @@ pub fn get_opts() -> Opts {
     let matches = match opts.parse(&args[1..]) {
         Ok(parsed) => parsed,
         Err(f) => {
-            eprintln!("{}", f.to_string());
+            eprintln!("{}", f);
             std::process::exit(1)
         }
     };

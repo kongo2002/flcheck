@@ -55,7 +55,7 @@ impl ValidationLevel {
     pub fn from_str(input: &str) -> Option<ValidationLevel> {
         ValidationLevel::values()
             .find(|level| level.as_str() == input)
-            .map(|level| level.clone())
+            .cloned()
     }
 }
 
@@ -113,7 +113,7 @@ impl ValidationType {
     pub fn from_str(input: &str) -> Option<ValidationType> {
         ValidationType::values()
             .find(|typ| typ.as_str() == input)
-            .map(|typ| typ.clone())
+            .cloned()
     }
 }
 

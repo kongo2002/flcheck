@@ -30,7 +30,7 @@ pub fn yaml_str_list(yaml: &Yaml) -> Vec<String> {
 
     yaml.as_vec()
         .unwrap_or(&empty_list)
-        .into_iter()
+        .iter()
         .flat_map(|entry| entry.as_str().map(|x| x.to_owned()))
         .filter(|value| !value.is_empty())
         .collect()
@@ -43,7 +43,7 @@ pub fn yaml_str_list(yaml: &Yaml) -> Vec<String> {
 /// function in the first place.
 pub fn normalize_path_str(path_str: String) -> PathBuf {
     let path = Path::new(path_str.as_str());
-    return normalize_path(path);
+    normalize_path(path)
 }
 
 /// Helper function that normalizes (or canonicalizes) the given `path`. This function does not

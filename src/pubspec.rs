@@ -37,10 +37,10 @@ impl Pubspec {
                 path
             )))
             .map(|(dir_name, dir_path)| Pubspec {
-                name: name,
+                name,
+                dir_name,
+                dir_path,
                 path: path.to_owned(),
-                dir_name: dir_name,
-                dir_path: dir_path,
                 dependencies: get_dependencies(&yaml),
                 dev_dependencies: get_dev_dependencies(&yaml),
                 is_public: is_public_package(&yaml),
@@ -72,16 +72,16 @@ impl Pubspec {
                 .flatten()
         });
 
-        return dependency_validations
+        dependency_validations
             .chain(all_dependency_validations)
             .chain(dev_dependency_validations)
-            .collect();
+            .collect()
     }
 
     fn resolve_dependency<'a>(
         &self,
         dep: &Dependency,
-        packages: &'a Vec<Pubspec>,
+        packages: &'a [Pubspec],
     ) -> Option<&'a Pubspec> {
         match dep.effective() {
             Dependency::Local { path, .. } => {
@@ -118,12 +118,12 @@ impl Pubspec {
 
                     prepared.push(format!("'{}'", rev_dep.dir_name));
 
-                    return Some(self.validation(
+                    Some(self.validation(
                         config,
                         format!("cyclic dependency {}", prepared.join(" -> ")),
                         ValidationType::CyclicDependency,
                         None,
-                    ));
+                    ))
                 } else {
                     let all_dependencies = rev_dep
                         .dependencies
@@ -138,7 +138,7 @@ impl Pubspec {
                             return cyclic;
                         }
                     }
-                    return None;
+                    None
                 }
             }
             None => None,
@@ -183,7 +183,7 @@ impl Pubspec {
         &self,
         dep: &Dependency,
         config: &Config,
-        packages: &Vec<Pubspec>,
+        packages: &[Pubspec],
     ) -> Option<PackageValidation> {
         // dependencies are not analyzed with an empty configuration
         if config.is_empty() {
@@ -256,10 +256,10 @@ impl Pubspec {
 
         PackageValidation {
             package_name: self.name.clone(),
-            error: error,
-            code: code,
-            level: level,
             description: description.into(),
+            error,
+            code,
+            level,
         }
     }
 }
@@ -267,7 +267,7 @@ impl Pubspec {
 fn valid_include_prefixes(pkg_type: &PackageType, config: &Config) -> Vec<String> {
     let mut prefixes = vec![];
     config.package_types.iter().for_each(|pkg| {
-        if pkg_type.includes.iter().any(|inc| *inc == pkg.name) {
+        if pkg_type.includes.contains(&pkg.name) {
             for prefix in pkg.prefixes.iter() {
                 if !prefixes.contains(prefix) {
                     prefixes.push(prefix.clone());
@@ -305,10 +305,8 @@ pub fn find_pubspecs(root_dir: &str) -> Vec<String> {
         let filename = entry.file_name().to_str().unwrap_or("").to_lowercase();
         let is_pubspec = filename == "pubspec.yaml" || filename == "pubspec.yml";
 
-        if is_pubspec {
-            if let Some(path) = entry.path().to_str() {
-                pubspecs.push(path.to_owned());
-            }
+        if is_pubspec && let Some(path) = entry.path().to_str() {
+            pubspecs.push(path.to_owned());
         }
     }
 
@@ -404,7 +402,7 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
         .or_else(|| value.as_f64().map(|num| format!("{}", num)))
         .map(|version| Dependency::PubDev {
             name: key.to_owned(),
-            version: version,
+            version,
             overridden: Box::new(None),
         })
 }

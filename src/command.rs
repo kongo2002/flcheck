@@ -75,17 +75,14 @@ pub async fn check(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
         println!("{}", pubspec.name);
 
         for dep in pubspec.dependencies {
-            match dep {
-                Dependency::PubDev { name, version, .. } => {
-                    let pub_version = lookup.get(&name).map(|vsn| &vsn.latest);
-                    println!(
-                        "  {}: {} [{}]",
-                        name,
-                        version,
-                        pub_version.map_or("<unknown>", String::as_str)
-                    );
-                }
-                _ => {}
+            if let Dependency::PubDev { name, version, .. } = dep {
+                let pub_version = lookup.get(&name).map(|vsn| &vsn.latest);
+                println!(
+                    "  {}: {} [{}]",
+                    name,
+                    version,
+                    pub_version.map_or("<unknown>", String::as_str)
+                );
             }
         }
     }
@@ -207,10 +204,7 @@ fn group_validations(validations: Vec<PackageValidation>) -> JsonValidationResul
         }
     }
 
-    JsonValidationResult {
-        warnings: warnings,
-        errors: errors,
-    }
+    JsonValidationResult { warnings, errors }
 }
 
 pub fn example_config() {

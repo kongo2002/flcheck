@@ -230,7 +230,7 @@ impl Config {
 
 /// Convert a list of `Regex` into a list of their
 /// respective string representations (used for equality tests).
-fn regex_str_list(regexes: &Vec<Regex>) -> Vec<&str> {
+fn regex_str_list(regexes: &[Regex]) -> Vec<&str> {
     regexes.iter().map(|rgx| rgx.as_str()).collect::<Vec<_>>()
 }
 

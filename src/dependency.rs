@@ -86,26 +86,17 @@ impl Dependency {
     /// Whether this dependency is a "local" dependency, meaning
     /// it references a package in the current/same repository.
     pub fn is_local(&self) -> bool {
-        match self {
-            Dependency::Local { .. } => true,
-            _ => false,
-        }
+        matches!(self, Dependency::Local { .. })
     }
 
     /// Whether this dependency is a reference to a git repository.
     pub fn is_git(&self) -> bool {
-        match self {
-            Dependency::Git { .. } => true,
-            _ => false,
-        }
+        matches!(self, Dependency::Git { .. })
     }
 
     /// Whether the dependency is a package hosted on pub.dev
     pub fn is_pubdev(&self) -> bool {
-        match self {
-            Dependency::PubDev { .. } => true,
-            _ => false,
-        }
+        matches!(self, Dependency::PubDev { .. })
     }
 
     /// Whether this dependency refers to a git repository that
