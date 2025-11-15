@@ -99,6 +99,10 @@ directory) that lists the dependency rules of all packages involved.
 - `validations`: configure a severity for each validation type that is
   supported (`error`, `warn` or `none`, defaults to `error`)
 
+You *can* run flcheck without a configuration file, however not all features
+will be available. If you are only interested in e.g. the dependency graph or
+detect cyclic dependencies that won't be necessary though.
+
 
 ### Recommended package setup
 
