@@ -386,7 +386,7 @@ fn extract_dependency(key: &str, value: &Yaml) -> Option<Dependency> {
     let git_url = git_node["url"].as_str().unwrap_or("");
     let git_path = git_node["path"].as_str().unwrap_or("");
 
-    if !git_url.is_empty() && !git_path.is_empty() {
+    if !git_url.is_empty() {
         return Some(Dependency::Git {
             name: key.to_owned(),
             git: git_url.to_owned(),
