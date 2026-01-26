@@ -52,6 +52,10 @@ impl Pubspec {
             })
     }
 
+    pub fn is_workspace(&self) -> bool {
+        !self.references_workspace && !self.workspaces.is_empty()
+    }
+
     pub fn validate(&self, config: &Config, packages: &Vec<Pubspec>) -> Vec<PackageValidation> {
         if config.is_blacklisted(&self.path) {
             return vec![];

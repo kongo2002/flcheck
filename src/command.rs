@@ -32,6 +32,11 @@ pub fn graph(pubspecs: Vec<Pubspec>) -> Result<(), FlError> {
     println!("  ranksep =\"2.0 equally\";");
 
     for pubspec in pubspecs {
+        // we skip workspace pubspecs since they typically do not have dependencies themselves
+        if pubspec.is_workspace() {
+            continue;
+        }
+
         println!("  // {}", pubspec.name);
         println!("  {} []", pubspec.name);
 
