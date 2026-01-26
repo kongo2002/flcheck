@@ -49,6 +49,7 @@ pub fn get_opts() -> Opts {
     opts.optopt("c", "config", "config file (default: flcheck.yaml)", "FILE");
     opts.optopt("d", "dir", "apps directory", "DIR");
     opts.optopt("o", "output", "output format (plain, json)", "FORMAT");
+    opts.optflag("", "version", "show version");
     opts.optflag("h", "help", "show help");
 
     let matches = match opts.parse(&args[1..]) {
@@ -62,6 +63,12 @@ pub fn get_opts() -> Opts {
     // print help/usage
     if matches.opt_present("h") {
         usage(&opts, &args[0]);
+        std::process::exit(0);
+    }
+
+    // print version
+    if matches.opt_present("version") {
+        println!("{}", env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
     }
 
