@@ -271,10 +271,11 @@ blacklist:
 # `none` to be ignored.
 # If not specified, every validation defaults to `error`
 validations:
-  validation:dev-dependency:git: error
-  validation:dependency:unknown: error
-  validation:dependency:unallowed: error
   validation:dependency:cyclic: error
+  validation:dependency:unallowed: error
+  validation:dependency:unknown: error
+  validation:dev-dependency:git: error
+  validation:package:missing-workspace: error
   validation:public:dependency:non-git: error
 "#
     );

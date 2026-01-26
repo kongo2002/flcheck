@@ -84,6 +84,7 @@ pub enum ValidationType {
     DependencyNotAllowed,
     CyclicDependency,
     NonGitDependencyInPublicPackage,
+    PackageNotPartOfWorkspace,
 }
 
 impl ValidationType {
@@ -93,6 +94,7 @@ impl ValidationType {
             ValidationType::UnknownDependency => "validation:dependency:unknown",
             ValidationType::DependencyNotAllowed => "validation:dependency:unallowed",
             ValidationType::CyclicDependency => "validation:dependency:cyclic",
+            ValidationType::PackageNotPartOfWorkspace => "validation:package:missing-workspace",
             ValidationType::NonGitDependencyInPublicPackage => {
                 "validation:public:dependency:non-git"
             }
@@ -100,12 +102,13 @@ impl ValidationType {
     }
 
     pub fn values() -> Iter<'static, ValidationType> {
-        static TYPES: [ValidationType; 5] = [
+        static TYPES: [ValidationType; 6] = [
             ValidationType::GitDevDependency,
             ValidationType::UnknownDependency,
             ValidationType::DependencyNotAllowed,
             ValidationType::CyclicDependency,
             ValidationType::NonGitDependencyInPublicPackage,
+            ValidationType::PackageNotPartOfWorkspace,
         ];
         TYPES.iter()
     }
