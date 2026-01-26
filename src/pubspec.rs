@@ -24,12 +24,15 @@ pub struct Pubspec {
     pub dependencies: Vec<Dependency>,
     pub dev_dependencies: Vec<Dependency>,
     pub is_public: bool,
+    pub references_workspace: bool,
+    pub workspaces: Vec<String>,
 }
 
 impl Pubspec {
     pub fn load(path: &str) -> Result<Pubspec, FlError> {
         let yaml = load_yaml(path)?;
         let name = yaml["name"].as_str().unwrap_or("").to_owned();
+        let references_workspace = yaml["resolution"].as_str().unwrap_or("") == "workspace";
 
         pubspec_dir(path)
             .ok_or(ConfigValidation(format!(
@@ -44,6 +47,8 @@ impl Pubspec {
                 dependencies: get_dependencies(&yaml),
                 dev_dependencies: get_dev_dependencies(&yaml),
                 is_public: is_public_package(&yaml),
+                workspaces: get_workspaces(&yaml),
+                references_workspace,
             })
     }
 
@@ -318,6 +323,17 @@ fn is_public_package(yaml: &Yaml) -> bool {
     is_public_node.unwrap_or(false)
 }
 
+fn get_workspaces(yaml: &Yaml) -> Vec<String> {
+    let empty = Vec::new();
+    yaml["workspace"]
+        .as_vec()
+        .unwrap_or(&empty)
+        .iter()
+        .map(|v| v.as_str().unwrap_or("").to_owned())
+        .filter(|v| !v.is_empty())
+        .collect()
+}
+
 fn get_dependencies(yaml: &Yaml) -> Vec<Dependency> {
     let dependencies = &yaml["dependencies"];
     let dependency_overrides = &yaml["dependency_overrides"];
@@ -463,6 +479,8 @@ mod tests {
             dependencies: Vec::new(),
             dev_dependencies: Vec::new(),
             is_public: false,
+            references_workspace: false,
+            workspaces: Vec::new(),
         };
     }
 
