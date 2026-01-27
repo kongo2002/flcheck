@@ -6,7 +6,7 @@
 2026-01-27
 
 - feature: add validation for packages outside of pubspec workspaces
-- improvement: detect git dependencies with `path`
+- improvement: detect git dependencies without `path`
 - improvement: add `--version` flag
 - internal: update dependencies
 
