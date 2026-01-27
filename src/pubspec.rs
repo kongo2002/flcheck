@@ -84,7 +84,63 @@ impl Pubspec {
         dependency_validations
             .chain(all_dependency_validations)
             .chain(dev_dependency_validations)
+            .chain(self.validate_workspace(config, packages))
             .collect()
+    }
+
+    fn validate_workspace(
+        &self,
+        config: &Config,
+        packages: &[Pubspec],
+    ) -> Option<PackageValidation> {
+        // we are a workspace ourselves -> nothing to check
+        if self.is_workspace() {
+            return None;
+        }
+
+        // we _do_ reference a workspace -> we are fine
+        if self.references_workspace {
+            return None;
+        }
+
+        // note: completely invalid workspace references are already
+        // detected by `pub` itself, so there is no need to validate further
+
+        let mut workspaces: Vec<_> = packages.iter().filter(|pkg| pkg.is_workspace()).collect();
+        workspaces.sort_by_key(|pkg| pkg.dir_path.len());
+        workspaces.reverse();
+
+        for workspace in workspaces {
+            if self.is_parent(workspace) {
+                return Some(self.validation(
+                    config,
+                    "not part of parent pubspec workspace".to_string(),
+                    ValidationType::PackageNotPartOfWorkspace,
+                    format!("workspace at {}", workspace.path),
+                ));
+            }
+        }
+
+        None
+    }
+
+    fn is_parent(&self, other: &Pubspec) -> bool {
+        let path = PathBuf::from(&self.dir_path);
+
+        for parent in path.ancestors().skip(1) {
+            let parent_path = match parent.to_str() {
+                Some(p) => p,
+                None => continue,
+            };
+
+            if parent_path == other.dir_path {
+                return true;
+            }
+
+            // TODO: break on root directory
+        }
+
+        false
     }
 
     fn resolve_dependency<'a>(
