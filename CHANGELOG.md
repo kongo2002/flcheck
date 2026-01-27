@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 1.4.0
+
+2026-01-27
+
+- feature: add validation for packages outside of pubspec workspaces
+- improvement: detect git dependencies with `path`
+- improvement: add `--version` flag
+- internal: update dependencies
+
+
 ## 1.3.0
 
 2025-11-15
