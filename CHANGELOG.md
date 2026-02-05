@@ -1,6 +1,14 @@
 # Changelog
 
 
+## 1.4.1
+
+2026-02-05
+
+- bug: support cyclic definition of package includes
+- internal: update dependencies
+
+
 ## 1.4.0
 
 2026-01-27
