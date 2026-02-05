@@ -331,6 +331,11 @@ impl Pubspec {
 
 fn valid_include_prefixes(pkg_type: &PackageType, config: &Config) -> Vec<String> {
     let mut prefixes = vec![];
+    valid_include_prefixes_for(pkg_type, config, &mut prefixes);
+    prefixes
+}
+
+fn valid_include_prefixes_for(pkg_type: &PackageType, config: &Config, prefixes: &mut Vec<String>) {
     config.package_types.iter().for_each(|pkg| {
         if pkg_type.includes.contains(&pkg.name) {
             for prefix in pkg.prefixes.iter() {
@@ -338,17 +343,12 @@ fn valid_include_prefixes(pkg_type: &PackageType, config: &Config) -> Vec<String
                     prefixes.push(prefix.clone());
 
                     if pkg.name != pkg_type.name {
-                        for iprefix in valid_include_prefixes(pkg, config) {
-                            if !prefixes.contains(&iprefix) {
-                                prefixes.push(iprefix);
-                            }
-                        }
+                        valid_include_prefixes_for(pkg, config, prefixes);
                     }
                 }
             }
         }
     });
-    prefixes
 }
 
 pub fn find_pubspecs(root_dir: &str) -> Vec<String> {
